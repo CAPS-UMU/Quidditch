@@ -38,14 +38,14 @@ sh run.sh <nameOfTestToRun>
    mkdir toolchain
    ```
 
-4. I'm not sure exactly what this does. I think it uses docker to generate a folder we need. I should find out what this really does.
-   ```
+4. ```
    docker run --rm ghcr.io/opencompl/quidditch/toolchain:main tar -cC /opt/quidditch-toolchain .\
     | tar -xC ./toolchain
    ```
 
 5. ```
-   python -m venv venv
+   mkdir venv
+   virtualenv venv --python=3.11
    ```
 
 6. ```
@@ -53,10 +53,14 @@ sh run.sh <nameOfTestToRun>
    ```
 
 7. ```
-   mkdir build && cd build
+   pip install setuptools
    ```
 
 8. ```
+   mkdir build && cd build
+   ```
+
+9. ```
    cmake .. -GNinja \
      -DCMAKE_C_COMPILER=clang \
      -DCMAKE_CXX_COMPILER=clang++ \
@@ -65,7 +69,7 @@ sh run.sh <nameOfTestToRun>
      -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake
    ```
 
-9. ```
+10. ```
    ninja -j 20
    ```
 
