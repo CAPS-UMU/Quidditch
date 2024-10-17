@@ -69,11 +69,12 @@ sh run.sh <nameOfTestToRun>
      -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake
    ```
 
-10. ```
+10. Build with `-j` set to number of cores
+   ```
    ninja -j 20
    ```
 
-
+   
 
 ## I. Manually Tile nsnet with ZigZag
 
