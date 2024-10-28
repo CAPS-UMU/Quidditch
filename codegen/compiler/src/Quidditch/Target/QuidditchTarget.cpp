@@ -81,6 +81,8 @@ struct QuidditchTargetOptions {
   std::string xDSLOptPath;
   std::string toolChainRoot;
   bool assertCompiled = false;
+  std::string zigzagTilingScheme = ""; // added for ZigZag Tiling Pass
+  bool outputTiled = false;  // added for ZigZag Tiling Pass
   // TODO: This should actually be 112640 but DMA stack overflows. Ooopsie!
   unsigned l1MemoryBytes = 100000;
 
@@ -108,6 +110,16 @@ struct QuidditchTargetOptions {
         "iree-quidditch-toolchain-root", toolChainRoot, llvm::cl::cat(category),
         llvm::cl::desc("Path to the root directory of the Quidditch toolchain "
                        "(containing the toolchain file)"));
+    // added for ZigZag Tiling Pass
+    binder.opt<std::string>(
+        "iree-quidditch-zigzag-tiling-scheme", zigzagTilingScheme, llvm::cl::cat(category),
+        llvm::cl::desc("Path to the json file representing the ZigZag tiling scheme."));
+    // added for ZigZag Tiling Pass debugging
+    binder.opt<bool>(
+        "iree-quidditch-output-tiled", outputTiled,
+        llvm::cl::cat(category),
+        llvm::cl::desc(
+            "If true, throws an error after the tiling pass and outputs the tiled IR."));
     binder.opt<bool>(
         "iree-quidditch-assert-compiled", assertCompiled,
         llvm::cl::cat(category),

@@ -13,13 +13,13 @@ source ./venv/bin/activate && cd zigzag_tiling
 After making changes to quidditch, rebuild with 
 
 ```
-sh aScriptIWillMake.sh
+cd build; ninja -j 20
 ```
 
 Run test case with
 
 ```
-sh run.sh <nameOfTestToRun>
+someday I will make a script
 ```
 
 ## 0. Setup Notes 
@@ -69,14 +69,100 @@ sh run.sh <nameOfTestToRun>
      -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake
    ```
 
-10. Build with `-j` set to number of cores
+10. Build with `-j` set to number of cores (use `nproc --all` to determine number of cores on your system)
    ```
    ninja -j 20
    ```
 
-   
+ ## I. Run a test case
 
-## I. Manually Tile nsnet with ZigZag
+To list all test cases, navigate to the `<build-directory>` or `<build-directory>/runtime`, then do
+```
+ctest -N runtime-tests
+```
+
+To run a specific test case, navigate to `<build-directory>/runtime`, then do
+```
+ctest -R vec_multiply
+```
+
+(picking a test case name from the list printed out by the previously executed `-N` command)
+
+## II. Integrate ZigZag Tiling Pass into Quidditch
+
+Files to take note of
+
+- [quidditch_module.cmake](../runtime/cmake/quidditch_module.cmake)
+- [runtime/tests/cmakelists.txt](../runtime/tests/CMakeLists.txt)
+
+Invoking the iree compiler: `build/codegen/iree-configuration/iree/tools/iree-compile --help`
+
+- I added a test case to Quidditch called pomelo. To run build and the run the pomelo test case, I do
+
+```
+cd build;
+
+ninja -j 20
+```
+
+```
+/home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/pomelo/pomelo
+cd build/runtime; ctest -R pomelo
+```
+
+How do I see the IR after my pass? How do I pass options in to the iree compiler when using cmakelists.txt/a test case?
+
+```
+#############################################
+# Custom command for samples/pomelo/pamplemousse/pamplemousse_module.h
+
+build samples/pomelo/pamplemousse/pamplemousse_module.h samples/pomelo/pamplemousse/pamplemousse.o samples/pomelo/pamplemousse/pamplemousse.h samples/pomelo/pamplemousse/pamplemousse_llvm.h | ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_module.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.o ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_llvm.h: 
+
+CUSTOM_COMMAND 
+/home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir /home/hoppip/Quidditch/venv/bin/xdsl-opt /home/hoppip/Quidditch/toolchain/bin/pulp-as || 
+iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects 
+iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects 
+iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a 
+iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a 
+iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects 
+iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a 
+iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/pomelo && 
+  /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile 
+  --iree-vm-bytecode-module-strip-source-map=true 
+  --iree-vm-emit-polyglot-zip=false --iree-input-type=auto 
+  --iree-input-demote-f64-to-f32=0 
+  --iree-hal-target-backends=quidditch 
+  --iree-quidditch-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse.o 
+  --iree-quidditch-xdsl-opt-path=/home/hoppip/Quidditch/venv/bin/xdsl-opt 
+  --iree-quidditch-toolchain-root=/home/hoppip/Quidditch/toolchain 
+  --iree-quidditch-assert-compiled=true 
+  --output-format=vm-c 
+  --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir -o /home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse_module.h
+  
+  DESC = Generating pamplemousse/pamplemousse_module.h, pamplemousse/pamplemousse.o, pamplemousse/pamplemousse.h, pamplemousse/pamplemousse_llvm.h
+  restat = 1
+```
+
+Add options here: ` Quidditch/codegen/compiler/src/Quidditch/Target/QuidditchTarget.cpp`
+
+Options seem to be getting passed:
+
+```
+#############################################
+# Custom command for samples/pomelo/pamplemousse/pamplemousse_module.h
+
+build samples/pomelo/pamplemousse/pamplemousse_module.h samples/pomelo/pamplemousse/pamplemousse.o samples/pomelo/pamplemousse/pamplemousse.h samples/pomelo/pamplemousse/pamplemousse_llvm.h | ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_module.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.o ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_llvm.h: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir /home/hoppip/Quidditch/venv/bin/xdsl-opt /home/hoppip/Quidditch/toolchain/bin/pulp-as || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/pomelo && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-quidditch-zigzag-tiling-scheme=hoodle.json --iree-quidditch-output-tiled=true --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=quidditch --iree-quidditch-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse.o --iree-quidditch-xdsl-opt-path=/home/hoppip/Quidditch/venv/bin/xdsl-opt --iree-quidditch-toolchain-root=/home/hoppip/Quidditch/toolchain --iree-quidditch-assert-compiled=true --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir -o /home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse_module.h
+  DESC = Generating pamplemousse/pamplemousse_module.h, pamplemousse/pamplemousse.o, pamplemousse/pamplemousse.h, pamplemousse/pamplemousse_llvm.h
+  restat = 1
+```
+
+
+
+## III. Manually Tile nsnet with ZigZag
 
 ### What are the kernels IREE breaks nsnet into?
 
@@ -89,7 +175,7 @@ TODO
 
 TODO
 
-## II. Automate ZigZag Tiling
+## IV. Automate ZigZag Tiling
 
 TODO
 
@@ -412,7 +498,9 @@ TODO
    ninja -j 20
    ```
 
-9. ```
+9. Build Error:
+   
+   ```
    WARNING: Non-homogeneous multireg PERF_COUNTER_ENABLE skip multireg specific data generation.
    [133/140] Generating nsnet2/nsnet2_module.h, nsnet2/nsnet2...snet2/nsnet2.h, nsnet2/nsnet2_llvm.h, nsnet2/nsnet2_llvm.o
    <eval_with_key>.0 from /home/hoppip/Quidditch/venv/lib/python3.11/site-packages/torch/fx/experimental/proxy_tensor.py:551 in wrapped:47:0: warning: Failed to translate kernel with xDSL
@@ -629,7 +717,25 @@ TODO
    [140/140] Linking C executable samples/nsnet2/NsNet2
    ```
 
-   Who knows.
-
-10. 
+   xDSL indeed does not support custom MLIR syntax, so likely your front end tools generated a lowering of nsnet into linalg that contained custom syntax. Why did your front end tools do that? Are they the wrong version?
+   Solution:
+   
+   - Reinstall `python3.11`, this time using a package manager!
+     ```
+     sudo dnf install python3.11
+     ```
+   
+   - Remake your virtual environment:
+     ```
+     deactivate
+     cd ..
+     rm -r venv
+     mkdir venv
+     virtualenv venv --python=3.11
+     source ./venv/bin/activate
+     pip install setuptools
+     ```
+   
+   - Repeat the cmake and build steps to try again!
+   
 
