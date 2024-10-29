@@ -1,5 +1,7 @@
 # this script tries to compile some pomelo's MLIR with tiling scheme $1
 # [hoppip@inf-205-141 zigzag_tiling]$ sh run.sh /home/hoppip/Quidditch/zigzag_tiling/zigzag-tile-scheme.json
+# sh run.sh /home/hoppip/Quidditch/zigzag_tiling/zigzag-tile-scheme.json
+# sh run.sh hoodle.json
 echo $1
 
 cd /home/hoppip/Quidditch/build/runtime/samples/pomelo;
