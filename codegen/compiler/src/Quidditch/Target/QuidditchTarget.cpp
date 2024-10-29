@@ -202,6 +202,9 @@ public:
         .addPass(createCSEPass)
         .addPass(createFuseTensorPadWithConsumerPass)
         .addPass(createConcretizePadResultShapePass)
+        .addPass([&] {
+          return quidditch::createZigzagTiling({targetOptions.zigzagTilingScheme});
+        })
         .addPass([] {
           return quidditch::createTensorTilePass({quidditch::TilingLevel::L1});
         })

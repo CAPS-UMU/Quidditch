@@ -29,6 +29,16 @@ def ConfigureForSnitchPass
   : InterfacePass<"quidditch-configure-for-snitch",
       "mlir::FunctionOpInterface">;
 
+def ZigzagTiling : InterfacePass<"zigzag-tile", "mlir::FunctionOpInterface"> {
+  let summary = "Use ZigZag tiling scheme to optimize linalg operations.";
+  //let constructor = "mlir::createZigzagTilingPass()";
+  let options = [
+    Option<"tilingScheme", "tiling-scheme", "std::string", /*default=*/"",
+           "Name of a JSON file specifying loop bounds and order.">,
+  ];
+  //let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect", "scf::SCFDialect"];
+}
+
 def TensorTilePass : InterfacePass<"quidditch-tensor-tile",
   "mlir::FunctionOpInterface"> {
   let options = [

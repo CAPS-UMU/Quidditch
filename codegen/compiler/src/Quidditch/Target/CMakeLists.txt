@@ -29,6 +29,7 @@ iree_cc_library(
         "ReluToMax.cpp"
         "RemoveTrivialLoops.cpp"
         "TensorTile.cpp"
+        "ZigzagTiling.cpp"
         DEPS
         ::PassesIncGen
         Quidditch::Conversion::ConvertSnitchToLLVM
