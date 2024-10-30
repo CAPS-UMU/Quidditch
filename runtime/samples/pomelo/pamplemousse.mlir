@@ -1,5 +1,20 @@
-builtin.module @test_pamplemousse {
-    func.func @matmulTiny(%lhs: tensor<2x3xf64>, %rhs: tensor<3x2xf64>, %acc: tensor<2x2xf64>) -> tensor<2x2xf64> {
+builtin.module @pamplemousse {
+    func.func @add(%arg0: tensor<4xf64>, %arg1: tensor<4xf64>) -> tensor<4xf64> {
+      %init = tensor.empty() : tensor<4xf64>
+      %out = linalg.generic
+              {indexing_maps = [affine_map<(d0) -> (d0)>,
+                                affine_map<(d0) -> (d0)>,
+                                affine_map<(d0) -> (d0)>],
+               iterator_types = ["parallel"]}
+               ins(%arg0, %arg1 : tensor<4xf64>, tensor<4xf64>)
+               outs(%init : tensor<4xf64>) {
+      ^bb0(%in: f64 , %in_1: f64, %out: f64):
+        %o = arith.addf %in, %in_1 : f64
+        linalg.yield %o : f64
+      } -> tensor<4xf64>
+      func.return %out : tensor<4xf64>
+    }
+        func.func @matmulTiny(%lhs: tensor<2x3xf64>, %rhs: tensor<3x2xf64>, %acc: tensor<2x2xf64>) -> tensor<2x2xf64> {
   %result = linalg.matmul
     ins(%lhs, %rhs: tensor<2x3xf64>, tensor<3x2xf64>)
     outs(%acc: tensor<2x2xf64>)
@@ -8,19 +23,3 @@ builtin.module @test_pamplemousse {
   // return %acc: tensor<2x2xf64>
 }
 }
-
-// [fesvr] Wrote 36 bytes of bootrom to 0x1000
-// [fesvr] Wrote entry point 0x80000000 to bootloader slot 0x1020
-// [fesvr] Wrote 56 bytes of bootdata to 0x1024
-// [Tracer] Logging Hart          8 to logs/trace_hart_00000008.dasm
-// [Tracer] Logging Hart          0 to logs/trace_hart_00000000.dasm
-// [Tracer] Logging Hart          1 to logs/trace_hart_00000001.dasm
-// [Tracer] Logging Hart          2 to logs/trace_hart_00000002.dasm
-// [Tracer] Logging Hart          3 to logs/trace_hart_00000003.dasm
-// [Tracer] Logging Hart          4 to logs/trace_hart_00000004.dasm
-// [Tracer] Logging Hart          5 to logs/trace_hart_00000005.dasm
-// [Tracer] Logging Hart          6 to logs/trace_hart_00000006.dasm
-// [Tracer] Logging Hart          7 to logs/trace_hart_00000007.dasm
-// RESOURCE_EXHAUSTED; while invoking native function test_pamplemousse.matmulTiny; 
-// [ 1]   native hal.fence.create:0 -
-// [ 0]   native test_pamplemousse.matmulTiny:0 -

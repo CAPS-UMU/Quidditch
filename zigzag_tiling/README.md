@@ -107,6 +107,8 @@ ninja -j 20
 
 ```
 /home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/pomelo/pomelo
+/home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/nsnet2/NsNet2
+/home/hoppip/Quidditch/build/runtime/samples/nsnet2/NsNet2
 cd build/runtime; ctest -R pomelo
 ```
 
