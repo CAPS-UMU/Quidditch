@@ -123,10 +123,11 @@ private:
 
 void ZigzagTiling::runOnOperation() {
   if(this->tilingScheme.compare("strawberry.json") != 0){ 
-   getOperation()->emitWarning() << "i should skip the ZigZag pass..."<< "filename is " << this->tilingScheme << "\n";
+  //  getOperation()->emitWarning() << "i should skip the ZigZag pass..."<< "filename is " << this->tilingScheme << "\n";
    return; 
 
   }
+  getOperation()->emitWarning() << "I will NOT SKIP the ZigZag pass BECAUSE "<< "filename is " << this->tilingScheme << "\n";
   // strawberry is the "go ahead"
   // else{
   //   //return signalPassFailure();
