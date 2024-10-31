@@ -1,6 +1,6 @@
 builtin.module @pamplemousse {
   func.func @matmulTiny(%lhs: tensor<3x3xf64>, %rhs: tensor<3x3xf64>, %acc: tensor<3x3xf64>) -> tensor<3x3xf64> {
-  %result = linalg.add // if I change this to linalg.matmul, I get a RESOURCE_EXHAUSTED; error
+  %result = linalg.matmul // changing linalg.add to linalg.matmul, causes a RESOURCE_EXHAUSTED error
     ins(%lhs, %rhs: tensor<3x3xf64>, tensor<3x3xf64>)
     outs(%acc: tensor<3x3xf64>)
   -> tensor<3x3xf64>
