@@ -46,11 +46,29 @@ using namespace mlir::iree_compiler;
 namespace {
 class ZigzagTiling : public quidditch::impl::ZigzagTilingBase<ZigzagTiling> {
 public:
-  using Base::Base; // ZigzagTiling() = default;
+  using Base::Base;
+  struct TilingScheme {
+    bool valid = false;
+    uint64_t totalLoopCount = 0;
+    std::vector<std::vector<int>> bounds;
+    std::vector<std::vector<int>> order;
+    std::vector<std::vector<int>> finalIndices;
+    TilingScheme() = default;
+    void initialize(std::string filename);
+    std::string str();
+    friend std::stringstream &operator<<(std::stringstream &ss,
+                                         const ZigzagTiling::TilingScheme &ts);
+
+  private:
+    int findSubloop(size_t i, size_t j);
+    void setTotalLoopCount();
+    void buildFinalIndices();
+    void parseTilingScheme(StringRef fileContent);
+    void parseListOfListOfInts(llvm::json::Object *obj, std::string listName,
+                               std::vector<std::vector<int>> &out);
+  } ts;
 
 private:
-  bool skip = true;
-  std::string filename = "cyclops";
   SmallVector<OpFoldResult>
   ZigZagTileSizeComputation(OpBuilder &builder, Operation *operation,
                             ArrayRef<ArrayRef<int64_t>> tileSizes);
@@ -62,82 +80,32 @@ private:
                   int tilingLevel);
 
   void runOnOperation() override;
-  // everything below relates to processing the tiling scheme as input
-  LogicalResult initializeOptions(
-      StringRef options,
-      function_ref<LogicalResult(const Twine &)> errorHandler) override;
-  // LogicalResult initializeOptions(StringRef options) override;
-  void parseTilingScheme(StringRef fileContent);
-  void parseListOfListOfInts(llvm::json::Object *obj, std::string listName,
-                             std::vector<std::vector<int>> &out);
-  struct TilingScheme {
-    // TODO: use SmallVector (llvm/include/llvm/ADT/SmallVector.h)
-    //       instead of std::vector!
-    //       Check this link about when to use Small Vector:
-    //       llvm/docs/ProgrammersManual.rst#L1543-L1544
-    std::vector<std::vector<int>> bounds;
-    std::vector<std::vector<int>> order;
-    std::vector<std::vector<int>> finalIndices;
-    uint64_t totalLoopCount = 0;
-    TilingScheme() = default;
-    void setTotalLoopCount();
-    void buildFinalIndices();
-
-  private:
-    int findSubloop(size_t i, size_t j);
-  } ts;
-
-  friend std::stringstream &operator<<(std::stringstream &ss,
-                                       const ZigzagTiling::TilingScheme &ts) {
-    ss << "tiling scheme: {\nbounds: [ ";
-    for (const auto &sublist : ts.bounds) {
-      ss << "[ ";
-      for (const auto &bound : sublist) {
-        ss << " " << bound << " ";
-      }
-      ss << "] ";
-    }
-    ss << "]\n";
-    ss << "finalIndices: [ ";
-    for (const auto &sublist : ts.finalIndices) {
-      ss << "[ ";
-      for (const auto &pos : sublist) {
-        ss << " " << pos << " ";
-      }
-      ss << "] ";
-    }
-    ss << "]\n}";
-    ss << "order: [ ";
-    for (const auto &sublist : ts.order) {
-      ss << "[ ";
-      for (const auto &pos : sublist) {
-        ss << " " << pos << " ";
-      }
-      ss << "] ";
-    }
-    ss << "]\n}";
-    return ss;
-  }
 };
 } // namespace
 
 void ZigzagTiling::runOnOperation() {
-  if(this->tilingScheme.compare("strawberry.json") != 0){ 
-  //  getOperation()->emitWarning() << "i should skip the ZigZag pass..."<< "filename is " << this->tilingScheme << "\n";
-   return; 
+  if (this->tilingScheme.compare(
+          "/home/hoppip/Quidditch/zigzag_tiling/zigzag-tile-scheme.json") ==
+      0) {
+    getOperation()->emitWarning()
+        << "i found a ZigZag input :) tilingScheme is [" << this->tilingScheme
+        << "]\n";
+    if (!ts.valid) {
+      ts.initialize(tilingScheme);
+    }
+    getOperation()->emitWarning()
+        << "zigzag parsed tilingScheme is [" << this->ts.str() << "]\n";
+    return;
+  } else {
+    getOperation()->emitWarning()
+        << "i should skip the ZigZag pass... tilingScheme is ["
+        << this->tilingScheme << "]\n";
 
+    return;
   }
-  getOperation()->emitWarning() << "I will NOT SKIP the ZigZag pass BECAUSE "<< "filename is " << this->tilingScheme << "\n";
-  // strawberry is the "go ahead"
-  // else{
-  //   //return signalPassFailure();
-  //   getOperation()->emitOpError("YODELAYHEEEHOOOOOO~~~~!!");
-  //   return signalPassFailure();
-  // }
+
   llvm::SmallDenseSet<TilingInterface> targetOps;
-  // We know the operation implements a function op
-  // interface because we defined this pass as an interface pass on the
-  // FunctionOpInterface
+
   FunctionOpInterface funcOp = getOperation();
   // Pick out all the operations inside the current function
   // which implement a TilingInterface (linalg ops), and save them in a list.
@@ -327,27 +295,6 @@ ZigzagTiling::tileAndFuseEach(RewriterBase &rewriter,
     if (failed(tiledResults)) {
       LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] TILING FAILED\n");
       return failure();
-    } else {
-      // let's print out what the heck happened
-      // LLVM_DEBUG(llvm::dbgs()
-      //      << "[" DEBUG_TYPE "] Hopefully the tiled function is here: "<<
-      //      tilingInterfaceOp<<"\n");
-      // llvm::SetVector<Operation *> tiledAndFusedOps
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[" DEBUG_TYPE
-                    "] size of tiledAndFusedOps from tiledResults is  "
-                 << tiledResults->tiledAndFusedOps.size()
-                 << " and loops has size " << tiledResults->loops.size()
-                 << "\n");
-      for (const auto &op : tiledResults->tiledAndFusedOps) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "[" DEBUG_TYPE "] A generated op is: " << *op << "\n");
-      }
-
-      for (const auto &loop : tiledResults->loops) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "[" DEBUG_TYPE "] A generated op loop: " << loop << "\n");
-      }
     }
 
     // TODO: what does this block really do?
@@ -387,6 +334,8 @@ ZigzagTiling::ZigZagTileSizeComputation(OpBuilder &builder,
   return result;
 }
 
+// Tiling Scheme Functions defined below
+
 void ZigzagTiling::TilingScheme::setTotalLoopCount() {
   unsigned total = 0;
   for (const auto &bound : bounds) {
@@ -425,10 +374,31 @@ int ZigzagTiling::TilingScheme::findSubloop(size_t i, size_t j) {
   return -1;
 }
 
+void ZigzagTiling::TilingScheme::initialize(std::string filename) {
+  // try to read file
+  std::ifstream ifs(filename);
+  assert(ifs.is_open() && "Tiling Scheme File exists and can be opened.");
+  std::stringstream ss;
+  ss << ifs.rdbuf();
+  assert(ss.str().length() != 0 &&
+         "Tiling Scheme file cannot have content length of 0");
+  //  try to parse file contents
+  parseTilingScheme(StringRef(ss.str()));
+  setTotalLoopCount();
+  buildFinalIndices();
+  valid = true;
+}
+
+std::string ZigzagTiling::TilingScheme::str() {
+  std::stringstream ts_ss;
+  ts_ss << *this;
+  return ts_ss.str();
+}
+
 // helpers for processing tiling scheme input
-void ZigzagTiling::parseListOfListOfInts(llvm::json::Object *obj,
-                                         std::string listName,
-                                         std::vector<std::vector<int>> &out) {
+void ZigzagTiling::TilingScheme::parseListOfListOfInts(
+    llvm::json::Object *obj, std::string listName,
+    std::vector<std::vector<int>> &out) {
   llvm::json::Value *bnds = obj->get(StringRef(listName));
   if (!bnds) { // getAsArray returns a (const json::Array *)
     llvm::errs() << "Error: field labeled '" << listName
@@ -464,7 +434,7 @@ void ZigzagTiling::parseListOfListOfInts(llvm::json::Object *obj,
   }
 }
 
-void ZigzagTiling::parseTilingScheme(StringRef fileContent) {
+void ZigzagTiling::TilingScheme::parseTilingScheme(StringRef fileContent) {
   llvm::Expected<llvm::json::Value> maybeParsed =
       llvm::json::parse(fileContent);
   if (!maybeParsed) {
@@ -479,123 +449,40 @@ void ZigzagTiling::parseTilingScheme(StringRef fileContent) {
   }
   llvm::json::Object *O = maybeParsed->getAsObject();
   // try to read the two fields
-  parseListOfListOfInts(O, "bounds", ts.bounds);
-  parseListOfListOfInts(O, "order", ts.order);
+  parseListOfListOfInts(O, "bounds", bounds);
+  parseListOfListOfInts(O, "order", order);
 }
 
-LogicalResult ZigzagTiling::initializeOptions(
-    StringRef options,
-    function_ref<LogicalResult(const Twine &)> errorHandler) {
-  this->filename = "unicorn";
-  if (failed(Pass::initializeOptions(options, errorHandler))) {
-    return failure();
-  }
-  this->filename = std::string(options.str());
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                          << "the options are  [ " << options << " ]\n");
-
-  if (options.consume_front(StringRef("tiling-scheme="))) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE "] "
-               << "ate the front so now filename is  [ " << options.data()
-               << " ] with length [ " << strlen(options.data()) << " ]\n");
-  } else {
-    LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] couldn't eat the front :(\n");
-  }
-
-  if (options.consume_back(StringRef("}))"))) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE "] "
-               << "ate the back so now filename is  [ " << options.data()
-               << " ] with length [ " << strlen(options.data()) << " ]\n");
-  } else {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE "] "
-               << "couldn't eat the back. filename is  [ " << options.data()
-               << " ] with length [ " << strlen(options.data()) << " ]\n");
-  }
-
-  char *aCopy = (char *)malloc(options.size() + 1);
-  for (size_t i = 0; i < options.size() + 1; i++) {
-    aCopy[i] = 0;
-  }
-  for (size_t i = 0; i < options.size(); i++) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE "] ." << (int)options.data()[i] << ". ]\n");
-    aCopy[i] = options.data()[i];
-  }
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] aCopy is.[" << aCopy << "]\n");
-
-  /*
-  constexpr llvm::StringRef::StringRef 	( 	const char *  	data,
-                  size_t  	length
-          )
-  */
-
-  // llvm::StringRef filename(options.data(), options.size()-3);// =
-  // options.substr(0,options.size()-1);
-  llvm::StringRef filename =
-      options.substr(0, 23); // = options.substr(0,options.size()-1);
-
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] new StringRef is ."
-                          << filename.data() << ". ] with length "
-                          << filename.size() << "\n");
-
-  // try to read file
-  std::ifstream ifs(aCopy);
-
-  // std::string str1 ("green apple");
-  // std::string str2 ("red apple");
-
-  // if ((std::string(aCopy)).compare(std::string("")) != 0){
-  //   skip = true;
-
-  // }
-
-  if (!ifs.is_open()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE "] "
-               << "Error opening file: " << options.data() << "\n");
-
-    // Check for specific error conditions
-    if (ifs.bad()) {
-      LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                              << "Fatal error: badbit is set."
-                              << "\n");
+namespace {
+std::stringstream &operator<<(std::stringstream &ss,
+                              const ZigzagTiling::TilingScheme &ts) {
+  ss << "tiling scheme: {\nbounds: [ ";
+  for (const auto &sublist : ts.bounds) {
+    ss << "[ ";
+    for (const auto &bound : sublist) {
+      ss << " " << bound << " ";
     }
-
-    if (ifs.fail()) {
-      // Print a more detailed error message using
-      // strerror
-      LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                              << "Error details: " << strerror(errno) << "\n");
-    }
-
-    // Handle the error or exit the program
-    return failure();
+    ss << "] ";
   }
-
-  // assert(ifs.fail() != false && "Tiling Scheme file reading error.");
-  std::stringstream ss;
-  ss << ifs.rdbuf();
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                          << "file contains... [ " << ss.str()
-                          << " ] with str length [ " << ss.str().length()
-                          << " ]\n");
-  assert(ss.str().length() != 0 &&
-         "Tiling Scheme file cannot have content length of 0");
-  free(aCopy);
-  //  try to parse file contents
-  parseTilingScheme(StringRef(ss.str()));
-  std::stringstream ts_ss;
-  ts_ss << ts;
-  ts.setTotalLoopCount();
-  ts.buildFinalIndices();
-  // print out what we parsed
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                          << "the tile scheme we parsed from the json is...\n"
-                          << ts_ss.str() << "\n");
-
-  skip = false; // if we can parse a tiling scheme, don't skip!
-  return success();
+  ss << "]\n";
+  ss << "finalIndices: [ ";
+  for (const auto &sublist : ts.finalIndices) {
+    ss << "[ ";
+    for (const auto &pos : sublist) {
+      ss << " " << pos << " ";
+    }
+    ss << "] ";
+  }
+  ss << "]\n}";
+  ss << "order: [ ";
+  for (const auto &sublist : ts.order) {
+    ss << "[ ";
+    for (const auto &pos : sublist) {
+      ss << " " << pos << " ";
+    }
+    ss << "] ";
+  }
+  ss << "]\n}";
+  return ss;
 }
+} // namespace
