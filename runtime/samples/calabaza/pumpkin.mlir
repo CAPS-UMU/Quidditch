@@ -1,11 +1,25 @@
 builtin.module @pumpkin {
-  func.func @matmulTiny(%lhs: tensor<3x3xf64>, %rhs: tensor<3x3xf64>, %acc: tensor<3x3xf64>) -> tensor<3x3xf64> {
-  %result = linalg.add // changing linalg.add to linalg.matmul, causes a RESOURCE_EXHAUSTED error
-    ins(%lhs, %rhs: tensor<3x3xf64>, tensor<3x3xf64>)
-    outs(%acc: tensor<3x3xf64>)
-  -> tensor<3x3xf64>
-  return %result: tensor<3x3xf64>
+  // func.func @matmulTiny(%lhs: tensor<104x104xf64>, %rhs: tensor<104x104xf64>, %acc: tensor<104x104xf64>) -> tensor<104x104xf64> {
+  // %result = linalg.matmul // changing linalg.add to linalg.matmul, causes a RESOURCE_EXHAUSTED error
+  //   ins(%lhs, %rhs: tensor<104x104xf64>, tensor<104x104xf64>)
+  //   outs(%acc: tensor<104x104xf64>)
+  // -> tensor<104x104xf64>
+  // return %result: tensor<104x104xf64>
+  // }
+    func.func @matmulTiny(%lhs: tensor<8x8xf64>, %rhs: tensor<8x8xf64>, %acc: tensor<8x8xf64>) -> tensor<8x8xf64> {
+  %result = linalg.matmul 
+    ins(%lhs, %rhs: tensor<8x8xf64>, tensor<8x8xf64>)
+    outs(%acc: tensor<8x8xf64>)
+  -> tensor<8x8xf64>
+  return %result: tensor<8x8xf64>
   }
+  // func.func @matmulTiny(%lhs: tensor<3x3xf64>, %rhs: tensor<3x3xf64>, %acc: tensor<3x3xf64>) -> tensor<3x3xf64> {
+  // %result = linalg.add // changing linalg.add to linalg.matmul, causes a RESOURCE_EXHAUSTED error
+  //   ins(%lhs, %rhs: tensor<3x3xf64>, tensor<3x3xf64>)
+  //   outs(%acc: tensor<3x3xf64>)
+  // -> tensor<3x3xf64>
+  // return %result: tensor<3x3xf64>
+  // }
 }
 
 // caused by linalg.matmul, but not linalg.add

@@ -191,6 +191,54 @@ TODO
 
 ## V. GrapeFruit
 
+Commands used to build nsnet example:
+```
+#############################################
+# Custom command for samples/nsnet2/nsnet2.mlirbc
+
+build samples/nsnet2/nsnet2.mlirbc | ${cmake_ninja_workdir}samples/nsnet2/nsnet2.mlirbc: CUSTOM_COMMAND /home/hoppip/Quidditch/runtime/samples/nsnet2/NsNet2.py || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/nsnet2 && /home/hoppip/Quidditch/venv/bin/python3.11 /home/hoppip/Quidditch/runtime/samples/nsnet2/NsNet2.py /home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2.mlirbc --dtype=f64
+  DESC = Translating NsNet2 using iree-turbine
+  restat = 1
+
+
+#############################################
+# Custom command for samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h
+
+build samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h samples/nsnet2/nsnet2_llvm/nsnet2_llvm.h samples/nsnet2/nsnet2_llvm/nsnet2_llvm.o | ${cmake_ninja_workdir}samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h ${cmake_ninja_workdir}samples/nsnet2/nsnet2_llvm/nsnet2_llvm.h ${cmake_ninja_workdir}samples/nsnet2/nsnet2_llvm/nsnet2_llvm.o: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile samples/nsnet2/nsnet2.mlirbc || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/nsnet2 && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=llvm-cpu --iree-llvmcpu-debug-symbols=true --iree-llvmcpu-target-triple=riscv32-unknown-elf --iree-llvmcpu-target-cpu=generic-rv32 --iree-llvmcpu-target-cpu-features=+m,+f,+d,+zfh --iree-llvmcpu-target-abi=ilp32d --iree-llvmcpu-target-float-abi=hard --iree-llvmcpu-link-embedded=false --iree-llvmcpu-link-static --iree-llvmcpu-number-of-threads=8 --iree-llvmcpu-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2_llvm/nsnet2_llvm.o --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2.mlirbc -o /home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h
+  DESC = Generating nsnet2_llvm/nsnet2_llvm_module.h, nsnet2_llvm/nsnet2_llvm.h, nsnet2_llvm/nsnet2_llvm.o
+  restat = 1
+```
+Custom commands for grapefruit??
+```
+#############################################
+# Custom command for samples/grapeFruit/grapeFruit/grapeFruit_module.h
+
+build samples/grapeFruit/grapeFruit/grapeFruit_module.h samples/grapeFruit/grapeFruit/grapeFruit.o samples/grapeFruit/grapeFruit/grapeFruit.h samples/grapeFruit/grapeFruit/grapeFruit_llvm.h samples/grapeFruit/grapeFruit/grapeFruit_llvm.o | ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit_module.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit.o ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit_llvm.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit_llvm.o: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile samples/grapeFruit/grapeFruit.mlirbc /home/hoppip/Quidditch/venv/bin/xdsl-opt /home/hoppip/Quidditch/toolchain/bin/pulp-as || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/grapeFruit && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=quidditch --iree-quidditch-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit.o --iree-quidditch-xdsl-opt-path=/home/hoppip/Quidditch/venv/bin/xdsl-opt --iree-quidditch-toolchain-root=/home/hoppip/Quidditch/toolchain --iree-hal-target-backends=llvm-cpu --iree-llvmcpu-debug-symbols=true --iree-llvmcpu-target-triple=riscv32-unknown-elf --iree-llvmcpu-target-cpu=generic-rv32 --iree-llvmcpu-target-cpu-features=+m,+f,+d,+zfh --iree-llvmcpu-target-abi=ilp32d --iree-llvmcpu-target-float-abi=hard --iree-llvmcpu-link-embedded=false --iree-llvmcpu-link-static --iree-llvmcpu-number-of-threads=8 --iree-llvmcpu-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit_llvm.o --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit.mlirbc -o /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit_module.h
+  DESC = Generating grapeFruit/grapeFruit_module.h, grapeFruit/grapeFruit.o, grapeFruit/grapeFruit.h, grapeFruit/grapeFruit_llvm.h, grapeFruit/grapeFruit_llvm.o
+  restat = 1
+
+
+#############################################
+# Custom command for samples/grapeFruit/grapeFruit.mlirbc
+
+build samples/grapeFruit/grapeFruit.mlirbc | ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit.mlirbc: CUSTOM_COMMAND /home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit.py || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/grapeFruit && /home/hoppip/Quidditch/venv/bin/python3.11 /home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit.py /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit.mlirbc --dtype=f64
+  DESC = Translating grapeFruit using iree-turbine
+  restat = 1
+
+
+#############################################
+# Custom command for samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h
+
+build samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.h samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o | ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile samples/grapeFruit/grapeFruit.mlirbc || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
+  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/grapeFruit && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=llvm-cpu --iree-llvmcpu-debug-symbols=true --iree-llvmcpu-target-triple=riscv32-unknown-elf --iree-llvmcpu-target-cpu=generic-rv32 --iree-llvmcpu-target-cpu-features=+m,+f,+d,+zfh --iree-llvmcpu-target-abi=ilp32d --iree-llvmcpu-target-float-abi=hard --iree-llvmcpu-link-embedded=false --iree-llvmcpu-link-static --iree-llvmcpu-number-of-threads=8 --iree-llvmcpu-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit.mlirbc -o /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h
+  DESC = Generating grapeFruit_llvm/grapeFruit_llvm_module.h, grapeFruit_llvm/grapeFruit_llvm.h, grapeFruit_llvm/grapeFruit_llvm.o
+  restat = 1
+```
+
 Try to take nsnet test case and turn it into matmul...
 
 ```

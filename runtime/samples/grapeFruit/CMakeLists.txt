@@ -1,7 +1,7 @@
 
 iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64")
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --iree-quidditch-zigzag-tiling-scheme=/home/hoppip/Quidditch/zigzag_tiling/zigzag-tile-scheme.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-zigzag-tiling-scheme=/home/hoppip/Quidditch/zigzag_tiling/zigzag-tile-scheme.json)
 
 add_library(grapeFruit_util grapeFruit_util.c)
 target_link_libraries(grapeFruit_util

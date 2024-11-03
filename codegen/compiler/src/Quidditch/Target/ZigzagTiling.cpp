@@ -100,8 +100,8 @@ void ZigzagTiling::runOnOperation() {
     getOperation()->emitWarning()
         << "i should skip the ZigZag pass... tilingScheme is ["
         << this->tilingScheme << "]\n";
-
     return;
+    
   }
 
   llvm::SmallDenseSet<TilingInterface> targetOps;
@@ -137,34 +137,30 @@ void ZigzagTiling::runOnOperation() {
   }
 
   // LET'S DO IT A SECOND TIME!!
-  targetOps.clear();
-  funcOp = getOperation(); // I know the operation implements a function op
-                           // interface
-  // pick out all the operations inside the current function
-  // which implement a TilingInterface, and save them in a list.
-  funcOp->walk([&](TilingInterface target) { targetOps.insert(target); });
-  context = &getContext();
-  if (targetOps.size() == 0) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE
-                  "] No Target Ops found inside this function after tiling!\n");
-  } else {
-    LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] Target Ops now has size "
-                            << targetOps.size() << "\n");
-    for (const auto &op : targetOps) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[" DEBUG_TYPE "] This target Op is " << op << "\n");
-    }
-    // create an instance of our derived struct Pattern Rewriter.
-    TrivialPatternRewriter rewriter(context);
-    // rewriter.setInsertionPoint(funcOp); // I think I don't need this because
-    // insertion point is set inside tileAndFuseEach
-    // give our pattern rewriter and our hand-picked list of operations
-    // to the tiling function tileAndFuseEach
-    if (failed(ZigzagTiling::tileAndFuseEach(rewriter, targetOps, 88))) {
-      return signalPassFailure();
-    }
-  }
+  // targetOps.clear();
+  // funcOp = getOperation(); // I know the operation implements a function op
+  //                          // interface
+  // // pick out all the operations inside the current function
+  // // which implement a TilingInterface, and save them in a list.
+  // funcOp->walk([&](TilingInterface target) { targetOps.insert(target); });
+  // context = &getContext();
+  // if (targetOps.size() == 0) {
+  //   LLVM_DEBUG(llvm::dbgs()
+  //              << "[" DEBUG_TYPE
+  //                 "] No Target Ops found inside this function after tiling!\n");
+  // } else {
+  //   LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] Target Ops now has size "
+  //                           << targetOps.size() << "\n");
+  //   for (const auto &op : targetOps) {
+  //     LLVM_DEBUG(llvm::dbgs()
+  //                << "[" DEBUG_TYPE "] This target Op is " << op << "\n");
+  //   }
+  //   // create an instance of our derived struct Pattern Rewriter.
+  //   TrivialPatternRewriter rewriter(context);
+  //   if (failed(ZigzagTiling::tileAndFuseEach(rewriter, targetOps, 88))) {
+  //     return signalPassFailure();
+  //   }
+  // }
 }
 
 /// This collects the set of operations to tile + fuse starting from the given
@@ -238,7 +234,8 @@ ZigzagTiling::tileAndFuseEach(RewriterBase &rewriter,
     scf::SCFTilingOptions tilingOptions;
     OpBuilder b(tilingInterfaceOp);
     // first level of tiling
-    ArrayRef<ArrayRef<int64_t>> tileSizes = {{8}, {8}, {26}};
+    // ArrayRef<ArrayRef<int64_t>> tileSizes = {{8}, {8}, {26}};
+    ArrayRef<ArrayRef<int64_t>> tileSizes = {{4}, {4}, {4}};
     const auto &ts = ZigzagTiling::ZigZagTileSizeComputation(
         b, tilingInterfaceOp, tileSizes);
     // second level of tiling
