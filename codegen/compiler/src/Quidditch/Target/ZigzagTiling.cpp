@@ -85,7 +85,7 @@ private:
 
 void ZigzagTiling::runOnOperation() {
   if (this->tilingScheme.compare(
-          "/home/hoppip/Quidditch/zigzag_tiling/zigzag-tile-scheme.json") ==
+          "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/grapeFruit-tiling-scheme.json") ==
       0) {
     getOperation()->emitWarning()
         << "i found a ZigZag input :) tilingScheme is [" << this->tilingScheme
