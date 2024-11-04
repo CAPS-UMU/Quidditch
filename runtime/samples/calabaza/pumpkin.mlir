@@ -6,12 +6,12 @@ builtin.module @pumpkin {
   // -> tensor<104x104xf64>
   // return %result: tensor<104x104xf64>
   // }
-    func.func @matmulTiny(%lhs: tensor<8x8xf64>, %rhs: tensor<8x8xf64>, %acc: tensor<8x8xf64>) -> tensor<8x8xf64> {
+    func.func @matmulTiny(%lhs: tensor<4x4xf64>, %rhs: tensor<4x4xf64>, %acc: tensor<4x4xf64>) -> tensor<4x4xf64> {
   %result = linalg.matmul 
-    ins(%lhs, %rhs: tensor<8x8xf64>, tensor<8x8xf64>)
-    outs(%acc: tensor<8x8xf64>)
-  -> tensor<8x8xf64>
-  return %result: tensor<8x8xf64>
+    ins(%lhs, %rhs: tensor<4x4xf64>, tensor<4x4xf64>)
+    outs(%acc: tensor<4x4xf64>)
+  -> tensor<4x4xf64>
+  return %result: tensor<4x4xf64>
   }
   // func.func @matmulTiny(%lhs: tensor<3x3xf64>, %rhs: tensor<3x3xf64>, %acc: tensor<3x3xf64>) -> tensor<3x3xf64> {
   // %result = linalg.add // changing linalg.add to linalg.matmul, causes a RESOURCE_EXHAUSTED error
