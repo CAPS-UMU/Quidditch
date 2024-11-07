@@ -1,12 +1,12 @@
 # Just Right vs Too Big Configs
 
-![just-right-vs-too-big](/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/debugging/no-double-buffering/just-right-vs-too-big.png)
+![just-right-vs-too-big](just-right-vs-too-big.png)
 
 - After the `240x80` memref, too-big just has two more `1x1200` memrefs like just-right.
 - Is it padding/alignment that makes this tiling not fit? OR is the addition the cause?
 - WHY are there THREE `1x1200` tensor allocations? Do I care as long as they both have them?
 
-![](/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/debugging/no-double-buffering/better-comparison2.png)
+![](better-comparison2.png)
 
 ## LHS
 
