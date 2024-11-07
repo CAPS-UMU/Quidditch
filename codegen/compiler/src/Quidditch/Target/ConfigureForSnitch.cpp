@@ -93,9 +93,12 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           // l1Tiles[2] = 100;
           dualBuffer = false;
           l1Interchange = {0, 2, 1}; 
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 240;
+          // l1Tiles[2] = 80;
           l1Tiles[0] = 0;
           l1Tiles[1] = 240;
-          l1Tiles[2] = 80;
+          l1Tiles[2] = 25;
         }
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
