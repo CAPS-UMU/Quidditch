@@ -1,6 +1,34 @@
-<eval_with_key>.0 from /home/hoppip/Quidditch/venv/lib/python3.11/site-packages/torch/fx/experimental/proxy_tensor.py:551 in wrapped:19:0: warning: kernel does not fit into L1 memory and cannot be compiled
-/home/hoppip/Quidditch/runtime/samples/nsnet2/NsNet2.py:90:0: note: called from
-<eval_with_key>.0 from /home/hoppip/Quidditch/venv/lib/python3.11/site-packages/torch/fx/experimental/proxy_tensor.py:551 in wrapped:19:0: note: see current operation: 
+<eval_with_key>.0 from /home/hoppip/Quidditch/venv/lib/python3.11/site-packages/torch/fx/experimental/proxy_tensor.py:551 in wrapped:19:0: warning: Let's look at ALL the allocOps before doging ANYTHING! 
+
+allocOp with memref shape 1 1200 
+
+allocOp with memref shape 1 80 
+
+allocOp with memref shape 240 80 
+
+allocOp with memref shape 240 80 
+
+allocOp with memref shape 1 1200 
+
+allocOp with memref shape 1 1200 
+Well, those were all the allocOps... =_=
+
+allocOp with memref shape 1 1200 
+offset is 0
+
+allocOp with memref shape 1 80 
+offset is 9600
+
+allocOp with memref shape 240 80 
+offset is 10240
+
+allocElements is 19200
+memref size is 153600
+offset is 163840
+l1MemoryBytes is 100000, so 63840too much
+kernel does not fit into L1 memory and cannot be compiled
+/home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit.py:90:0: note: called from
+
 "func.func"() <{function_type = () -> (), sym_name = "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"}> ({
   %0 = "quidditch_snitch.l1_memory_view"() : () -> memref<100000xi8>
   %1 = "arith.constant"() <{value = 240 : index}> : () -> index
@@ -150,4 +178,3 @@
   "dma.wait_for_transfer"(%36) : (!dma.token) -> ()
   "func.return"() : () -> ()
 }) {translation_info = #iree_codegen.translation_info<None>} : () -> ()
-

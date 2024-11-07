@@ -1,3 +1,7 @@
+<eval_with_key>.0 from /home/hoppip/Quidditch/venv/lib/python3.11/site-packages/torch/fx/experimental/proxy_tensor.py:551 in wrapped:19:0: warning: Radish tiling level L1 This is the rewritten kernel!!!!!
+
+/home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit.py:90:0: note: called from
+<eval_with_key>.0 from /home/hoppip/Quidditch/venv/lib/python3.11/site-packages/torch/fx/experimental/proxy_tensor.py:551 in wrapped:19:0: note: see current operation: 
 func.func @main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64() attributes {translation_info = #iree_codegen.translation_info<None>} {
   %c32_i64 = arith.constant 32 : i64
   %cst = arith.constant 0.000000e+00 : f64
@@ -35,7 +39,7 @@ func.func @main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64() attributes 
       %extracted_slice = tensor.extract_slice %18[0, %arg0] [1, 80] [1, 1] : tensor<1x400xf64> to tensor<1x80xf64>
       %extracted_slice_1 = tensor.extract_slice %19[%arg2, %arg0] [240, 80] [1, 1] : tensor<1200x400xf64> to tensor<240x80xf64>
       %extracted_slice_2 = tensor.extract_slice %arg3[0, %arg2] [1, 240] [1, 1] : tensor<1x1200xf64> to tensor<1x240xf64>
-      %26 = linalg.matmul_transpose_b ins(%extracted_slice, %extracted_slice_1 : tensor<1x80xf64>, tensor<240x80xf64>) outs(%extracted_slice_2 : tensor<1x240xf64>) -> tensor<1x240xf64>
+      %26 = linalg.matmul_transpose_b {lowering_config = #quidditch_snitch.lowering_config<l1_tiles = [0, 240, 80], l1_tiles_interchange = [0, 2, 1], dual_buffer = true>} ins(%extracted_slice, %extracted_slice_1 : tensor<1x80xf64>, tensor<240x80xf64>) outs(%extracted_slice_2 : tensor<1x240xf64>) -> tensor<1x240xf64>
       %inserted_slice = tensor.insert_slice %26 into %arg3[0, %arg2] [1, 240] [1, 1] : tensor<1x240xf64> into tensor<1x1200xf64>
       scf.yield %inserted_slice : tensor<1x1200xf64>
     }

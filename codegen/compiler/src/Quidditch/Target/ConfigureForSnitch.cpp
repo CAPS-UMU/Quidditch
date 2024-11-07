@@ -87,9 +87,15 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         }
         if (funcOp.getName() ==
             "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+              dualBuffer = false;
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 40;
+          // l1Tiles[2] = 100;
+          dualBuffer = false;
+          l1Interchange = {0, 2, 1}; 
           l1Tiles[0] = 0;
-          l1Tiles[1] = 40;
-          l1Tiles[2] = 100;
+          l1Tiles[1] = 240;
+          l1Tiles[2] = 80;
         }
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(

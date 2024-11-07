@@ -1,4 +1,10 @@
 # grapefruit notes
+
+Questions I have:
+
+1. what does the IR look like for "fits-right" AFTER the `LowerL1Allocations` pass without double buffering? what does the IR look like AFTER the removal of redundant L1 requests? Which pass refers to this?
+2. what does "too-big" look like without double buffering AND without the add function?
+
 ## main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64
 As ZigZag workload:
 ```
@@ -8,7 +14,7 @@ As ZigZag workload:
   equation: O[a][b]+=I[a][c]*W[b][c]
   dimension_relations: []
   loop_dims: [A,B,C]
-  loop_sizes: [1, 400, 1200]
+  loop_sizes: [1, 1200, 400]
   operand_precision:
     W: 64
     I: 64
@@ -19,6 +25,188 @@ As ZigZag workload:
     W: 0
 ```
 What is the hardware description used? Default temporal and spatial mappings?
+
+- ZigZag run documented [here](https://github.com/EmilySillars/zigzag/blob/manual-examples/modeling-snitch-with-zigzag.md#dispatch_1_matmul_transpose_b_1x1200x400_f64).
+
+- Full ZigZag output as a json file [here](snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/dispatch_1_matmul_transpose_b_1x1200x400_f64_complete.json)
+
+```
+hoodleLoop ordering for dispatch_1_matmul_transpose_b_1x1200x400_f64
+=============================================================================================
+Temporal Loops                      O                  W                  I                  
+=============================================================================================
+for C in [0, 5):                    l1                 l3                 l1                 
+---------------------------------------------------------------------------------------------
+  for B in [0, 5):                  l1                 l3                 l1                 
+---------------------------------------------------------------------------------------------
+    for C in [0, 5):                rf_f0_thru_f31     l1                 l1                 
+---------------------------------------------------------------------------------------------
+      for C in [0, 16):             rf_f0_thru_f31     l1                 l1                 
+---------------------------------------------------------------------------------------------
+        for B in [0, 6):            rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+          for B in [0, 5):          rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+=============================================================================================
+Spatial Loops                                                                                
+=============================================================================================
+            parfor B in [0, 8):                                                              
+---------------------------------------------------------------------------------------------
+            parfor C in [0, 1):                                                              
+---------------------------------------------------------------------------------------------
+```
+
+Sanity Check: Does the tiling at least (sort of) make sense?
+
+```
+Bounds for A: none; dimension A has a cardinality of 1, so not tiling this dimension checks out OK.
+
+Bounds for B: [5, 6, 5, 8 (spatial)]; 5*6*5*8 = 1200, so this checks out OK.
+
+Bounds for C: [5, 5, 16, 1 (degenerate)]; 5*5*16 = 400, so this checks out OK.
+```
+
+What are the tile sizes for each dimension then?
+
+```
+Tile Sizes for A: [1] (or 0, if input to the upstream mlir tiling function)
+Tile Sizes for B: [240, 40, 8, 1 (spatial)]
+Tile Sizes for C: [80, 16, 1 (spatial)]
+```
+
+What are the bounds and tile sizes, taking into account that Quidditch only cares about tiling L3 to fit into L1?
+
+```
+Bounds for A: []
+Bounds for B: [5]
+Bounds for C: [5]
+Tile Sizes for A: [1] (or 0, if input to the upstream mlir tiling function)
+Tile Sizes for B: [240]
+Tile Sizes for C: [80]
+```
+
+Let's summarize this as an input json:
+
+```
+{
+    "bounds":[[], [5], [5]],
+    "order":[[0,0], [2,0], [1,0]]
+}
+```
+
+Note: 0 refers to original A loop, 1 to original B loop, and 2 to original C loop.
+
+## manually tile nsnet kernel with ZigZag pass
+
+Operation before:
+
+```
+%23 = linalg.matmul_transpose_b {
+lowering_config = #quidditch_snitch.lowering_config<l1_tiles = [0, 40, 100], 
+
+l1_tiles_interchange = [2, 0, 1], 
+dual_buffer = true>} 
+ins(%18, %19 : tensor<1x400xf64>, tensor<1200x400xf64>) 
+outs(%22 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+```
+
+To be explicit, this means that
+
+```
+Input matrix has size 1x400
+
+Weight matrix has size 1200x400
+
+Output matrix has size 1x1200
+```
+
+Operation after:
+
+```
+  %21 = tensor.empty() : tensor<1x1200xf64>
+  %22 = linalg.fill ins(%cst : f64) outs(%21 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+  %c0 = arith.constant 0 : index
+  %c400 = arith.constant 400 : index
+  %c80 = arith.constant 80 : index
+  
+  %23 = scf.for %arg0 = %c0 to %c400 step %c80 iter_args(%arg1 = %22) -> (tensor<1x1200xf64>) {
+    %c0_0 = arith.constant 0 : index
+    %c1200 = arith.constant 1200 : index
+    %c240 = arith.constant 240 : index
+    
+    %25 = scf.for %arg2 = %c0_0 to %c1200 step %c240 iter_args(%arg3 = %arg1) -> (tensor<1x1200xf64>) {
+      %extracted_slice = tensor.extract_slice %18[0, %arg0] [1, 80] [1, 1] 
+      					: tensor<1x400xf64> to tensor<1x80xf64>
+      %extracted_slice_1 = tensor.extract_slice %19[%arg2, %arg0] [240, 80] [1, 1] 
+      					: tensor<1200x400xf64> to tensor<240x80xf64>
+      %extracted_slice_2 = tensor.extract_slice %arg3[0, %arg2] [1, 240] [1, 1] 
+      					: tensor<1x1200xf64> to tensor<1x240xf64>
+      					
+      %26 = linalg.matmul_transpose_b 
+      		ins(%extracted_slice, %extracted_slice_1 : tensor<1x80xf64>, tensor<240x80xf64>) 
+      		outs(%extracted_slice_2 : tensor<1x240xf64>) -> tensor<1x240xf64>
+      		
+      %inserted_slice = tensor.insert_slice %26 into %arg3[0, %arg2] [1, 240] [1, 1] 
+      					: tensor<1x240xf64> into tensor<1x1200xf64>
+      scf.yield %inserted_slice : tensor<1x1200xf64>
+    }
+    scf.yield %25 : tensor<1x1200xf64>
+  }
+```
+
+Running grapefruit with zigzag-tiled kernel:
+
+```
+/home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/GrapeFruit
+```
+
+If the program finishes (without errors), compare two versions.
+
+Else,  try to re-do using modified `configureForSnitch.cpp`. 
+
+​	If program still fails/and/or/hangs, try Shreya pytorch method
+
+​	Else, compare two versions.
+
+## What if I modify configureForSnitch to use zigzag tiling config?
+
+- I get this error: kernel does not fit into L1 memory and cannot be compiled
+- [Full error here](error-after-modifying-config-for-snitch.mlir)
+- From: /home/hoppip/Quidditch/codegen/compiler/src/Quidditch/Dialect/Snitch/Transforms/LowerL1Allocations.cpp
+
+```
+  %32 = "dma.start_transfer"(%22, %31) : (
+  memref<1x1200xf64, strided<[1200, 1], offset: ?>>, 
+  memref<1x1200xf64, strided<[1200, 1]>, #quidditch_snitch.l1_encoding>) -> !dma.token
+ 
+```
+
+
+
+Next step: print out more info. For example, what is the memref we try to allocate that means there isn't enough space? Use string stream
+
+```
+allocOp with memref shape 1 1200 
+offset is 0
+
+allocOp with memref shape 1 80 
+offset is 9600
+
+allocOp with memref shape 240 80 
+offset is 10240
+
+allocElements is 19200
+memref size is 153600
+offset is 163840
+l1MemoryBytes is 100000, so 63840too much
+kernel does not fit into L1 memory and cannot be compiled
+```
+
+NEXT STEP:
+
+**Why is it trying to allocate 1x1200 in L1? I am pretty sure there only needs to be tensor<1x240xf64>. Can we print out ALL the allocops with their sizes FIRST, then try to allocate, so we can check which allocop statements there actually are? I don't see the 1x400 in here. Is that because it appears later in the list, or because there is no allocaop for the 1x400?**
+
+## I messed up and gave zigzag the wrong workload
 
 ZigZag run documented [here](https://github.com/EmilySillars/zigzag/blob/manual-examples/modeling-snitch-with-zigzag.md#dispatch_1_matmul_transpose_b_1x1200x400_f64).
 
@@ -667,7 +855,7 @@ Body of loop says %arg2[a][b] += %arg0[a][c] * %arg1[b][c]
 For ZigZag then, we say that
 equation: O[a][b]+=I[a][c]*W[b][c]
 loop_dims: [A,B,C]
-loop_sizes: [1, 400, 1200]
+loop_sizes: [1, 1200, 400]
 ```
 ZigZag translation:
 ```
@@ -677,7 +865,7 @@ ZigZag translation:
   equation: O[a][b]+=I[a][c]*W[b][c]
   dimension_relations: []
   loop_dims: [A,B,C]
-  loop_sizes: [1, 400, 1200]
+  loop_sizes: [1, 1200, 400]
   operand_precision:
     W: 64
     I: 64

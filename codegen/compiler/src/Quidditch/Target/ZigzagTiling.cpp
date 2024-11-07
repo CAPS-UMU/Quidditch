@@ -73,11 +73,14 @@ private:
   ZigZagTileSizeComputation(OpBuilder &builder, Operation *operation,
                             ArrayRef<ArrayRef<int64_t>> tileSizes);
 
-  // my own hacky exploration
+  // my own hacky explorations
   LogicalResult
   tileAndFuseEach(RewriterBase &rewriter,
                   llvm::SmallDenseSet<TilingInterface> &payloadOps,
                   int tilingLevel);
+  LogicalResult coconut(RewriterBase &rewriter,
+                        llvm::SmallDenseSet<TilingInterface> &payloadOps,
+                        int tilingLevel, FunctionOpInterface &funcOp);
 
   void runOnOperation() override;
 };
@@ -85,23 +88,26 @@ private:
 
 void ZigzagTiling::runOnOperation() {
   if (this->tilingScheme.compare(
-          "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/grapeFruit-tiling-scheme.json") ==
-      0) {
-    getOperation()->emitWarning()
-        << "i found a ZigZag input :) tilingScheme is [" << this->tilingScheme
-        << "]\n";
-    if (!ts.valid) {
-      ts.initialize(tilingScheme);
-    }
-    getOperation()->emitWarning()
-        << "zigzag parsed tilingScheme is [" << this->ts.str() << "]\n";
+          "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/"
+          "snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_"
+          "1x1200x400_f64/grapeFruit-tiling-scheme.json") == 0) {
+    // if (!this->ts.valid) {
+    //   getOperation()->emitWarning()
+    //       << "valid: " << this->ts.valid
+    //       << " i found a ZigZag input :) tilingScheme is ["
+    //       << this->tilingScheme << "]\n";
+    //   this->ts.initialize(tilingScheme);
+    //   getOperation()->emitWarning()
+    //       << "zigzag parsed tilingScheme is [" << this->ts.str()
+    //       << "] valid: " << this->ts.valid << "\n";
+    // }
     return;
+
   } else {
-    getOperation()->emitWarning()
-        << "i should skip the ZigZag pass... tilingScheme is ["
-        << this->tilingScheme << "]\n";
+    // getOperation()->emitWarning()
+    //     << "i should skip the ZigZag pass... tilingScheme is ["
+    //     << this->tilingScheme << "]\n";
     return;
-    
   }
 
   llvm::SmallDenseSet<TilingInterface> targetOps;
@@ -118,49 +124,12 @@ void ZigzagTiling::runOnOperation() {
         : PatternRewriter(context) {}
   };
 
-  if (targetOps.size() == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE
-                               "] No Target Ops found inside this function!\n");
-  } else {
-    LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] Target Ops now has size "
-                            << targetOps.size() << "\n");
-    for (const auto &op : targetOps) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[" DEBUG_TYPE "] This target Op is " << op << "\n");
-    }
-    // create an instance of our derived struct Pattern Rewriter.
-    TrivialPatternRewriter rewriter(context);
-    // Tile each Linalg Operation using a ZigZag plan
-    if (failed(ZigzagTiling::tileAndFuseEach(rewriter, targetOps, 87))) {
-      return signalPassFailure();
-    }
+  // create an instance of our derived struct Pattern Rewriter.
+  TrivialPatternRewriter rewriter(context);
+  // Tile each Linalg Operation using a ZigZag plan
+  if (failed(ZigzagTiling::coconut(rewriter, targetOps, 87, funcOp))) {
+    return signalPassFailure();
   }
-
-  // LET'S DO IT A SECOND TIME!!
-  // targetOps.clear();
-  // funcOp = getOperation(); // I know the operation implements a function op
-  //                          // interface
-  // // pick out all the operations inside the current function
-  // // which implement a TilingInterface, and save them in a list.
-  // funcOp->walk([&](TilingInterface target) { targetOps.insert(target); });
-  // context = &getContext();
-  // if (targetOps.size() == 0) {
-  //   LLVM_DEBUG(llvm::dbgs()
-  //              << "[" DEBUG_TYPE
-  //                 "] No Target Ops found inside this function after tiling!\n");
-  // } else {
-  //   LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] Target Ops now has size "
-  //                           << targetOps.size() << "\n");
-  //   for (const auto &op : targetOps) {
-  //     LLVM_DEBUG(llvm::dbgs()
-  //                << "[" DEBUG_TYPE "] This target Op is " << op << "\n");
-  //   }
-  //   // create an instance of our derived struct Pattern Rewriter.
-  //   TrivialPatternRewriter rewriter(context);
-  //   if (failed(ZigzagTiling::tileAndFuseEach(rewriter, targetOps, 88))) {
-  //     return signalPassFailure();
-  //   }
-  // }
 }
 
 /// This collects the set of operations to tile + fuse starting from the given
@@ -188,22 +157,133 @@ collectTiledAndFusedOps(Operation *op,
   return producers;
 }
 
+LogicalResult
+ZigzagTiling::coconut(RewriterBase &rewriter,
+                      llvm::SmallDenseSet<TilingInterface> &payloadOps,
+                      int tilingLevel, FunctionOpInterface &funcOp) {
+
+  for (TilingInterface tilingInterfaceOp : payloadOps) {
+
+    auto linalgOp = cast<linalg::LinalgOp>(*tilingInterfaceOp);
+
+    DominanceInfo dominanceInfo(tilingInterfaceOp);
+    llvm::SmallDenseSet<Operation *> tiledAndFusedOps =
+        collectTiledAndFusedOps(tilingInterfaceOp, payloadOps);
+    DenseSet<Operation *> yieldReplacementsFor;
+    for (auto op : tiledAndFusedOps) {
+      if (llvm::any_of(op->getUsers(), [&](Operation *user) {
+            return dominanceInfo.properlyDominates(tilingInterfaceOp, user);
+          })) {
+        yieldReplacementsFor.insert(op);
+      }
+    }
+
+    // repeat tiling of each loop until we are done
+
+    rewriter.setInsertionPoint(tilingInterfaceOp);
+    scf::SCFTilingOptions tilingOptions;
+    OpBuilder b(tilingInterfaceOp);
+    // first level of tiling
+    ArrayRef<ArrayRef<int64_t>> tileSizes = {{0}, {240}, {80}};
+    const auto &ts = ZigzagTiling::ZigZagTileSizeComputation(
+        b, tilingInterfaceOp, tileSizes);
+    // interchange vector
+    ArrayRef<int64_t> interchange = {0, 2, 1};
+    // do something different based on the tilingLevel parameter.
+
+    if ((isa<linalg::MatmulTransposeBOp>(linalgOp)) &&
+        (funcOp.getName() ==
+         "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64")) {
+      if (!this->ts.valid) {
+      getOperation()->emitWarning()
+          << "valid: " << this->ts.valid
+          << " i found a ZigZag input :) tilingScheme is ["
+          << this->tilingScheme << "]\n";
+      this->ts.initialize(tilingScheme);
+      getOperation()->emitWarning()
+          << "zigzag parsed tilingScheme is [" << this->ts.str()
+          << "] valid: " << this->ts.valid << "\n";
+    }
+
+      linalgOp->emitWarning()
+          << "case 87: I'm THE matmultransposeB "
+             "operation! \n operands are... \n"
+          << linalgOp->getOperands() << "\nAND current function name is\n"
+          << funcOp.getName() << "\n";
+      // << "\n AND my iterator types are..."
+      // << linalgOp->getIteratorTypesArray()
+      // <<"\n";
+      // void eraseLoweringConfig(Operation *op) {
+      // op->removeAttr(kConfigAttrName); }
+      eraseLoweringConfig(linalgOp);
+      tilingOptions.setTileSizes(ts);
+      // tilingOptions.setTileSizeComputationFunction(ZigzagTiling::ZigZagTileSizeComputation);
+      tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
+      // tilingOptions.setInterchange(interchange); // TODO: interchange
+      interchange = {0, 2, 1};
+      tilingOptions.setInterchange(interchange);
+
+    } else {
+      continue;
+    }
+
+    scf::SCFTileAndFuseOptions tileAndFuseOptions;
+    tileAndFuseOptions.setTilingOptions(tilingOptions);
+
+    // TODO: what does this block of code even do? I have to find out.
+    scf::SCFTileAndFuseOptions::ControlFnTy controlFn =
+        [&](tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
+            bool isDestinationOperand) {
+          Operation *owner = originalProducer.getOwner();
+          bool yieldProducerReplacement = yieldReplacementsFor.contains(owner);
+          bool shouldFuse = false;
+          if (auto tilingOwner = dyn_cast<TilingInterface>(owner)) {
+            shouldFuse = !payloadOps.contains(tilingOwner);
+          }
+          // Do not fuse destination operands.
+          shouldFuse &= !isDestinationOperand;
+          return std::make_tuple(shouldFuse, yieldProducerReplacement);
+        };
+    tileAndFuseOptions.setFusionControlFn(controlFn);
+
+    // perform the tiling
+    FailureOr<scf::SCFTileAndFuseResult> tiledResults =
+        scf::tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
+                                                  tileAndFuseOptions);
+    if (failed(tiledResults)) {
+      LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] TILING FAILED\n");
+      return failure();
+    }
+
+    // TODO: what does this block really do?
+    // Perform the replacement of tiled and fused values.
+    SmallVector<Operation *> opsToReplace{tilingInterfaceOp};
+    llvm::append_range(opsToReplace, tiledResults->fusedProducers);
+    for (Operation *toReplace : opsToReplace) {
+      for (OpResult res : toReplace->getResults())
+        if (auto replacement = tiledResults->replacements.lookup(res)) {
+          Operation *replacementOp = replacement.getDefiningOp();
+          replacementOp->emitWarning() << "RADDISH WE HAVE TILED THE MATMUL AND IT'S RIGHT HERE.\n" ;//debugging
+          rewriter.replaceUsesWithIf(res, replacement, [&](OpOperand &use) {
+            Operation *user = use.getOwner();
+            return dominanceInfo.properlyDominates(replacementOp, user);
+          });
+        }
+
+      if (toReplace->use_empty()) {
+        rewriter.eraseOp(toReplace);
+      }
+    }
+  } // end of each for each tilingInterfaceOp
+  funcOp.emitWarning() << "RADDISH THE WHOLE FUNCTION IS HERE!";
+  return success();
+}
+
 // my hacky tiling investigation
 LogicalResult
 ZigzagTiling::tileAndFuseEach(RewriterBase &rewriter,
                               llvm::SmallDenseSet<TilingInterface> &payloadOps,
                               int tilingLevel) {
-  if (tilingLevel == 87) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "[" DEBUG_TYPE "] inside MY tiling exploration func!\n");
-  }
-
-  std::stringstream ts_ss;
-  ts_ss << ts;
-  // print out what we parsed
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                          << "the tile scheme we have currently is...\n"
-                          << ts_ss.str() << "\n");
 
   for (TilingInterface tilingInterfaceOp : payloadOps) {
 
@@ -212,9 +292,9 @@ ZigzagTiling::tileAndFuseEach(RewriterBase &rewriter,
     auto linalgOp = cast<linalg::LinalgOp>(*tilingInterfaceOp);
     // linalgOp.getShapesToLoopsMap()
 
-    LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
-                            << "linalgOp's loop map is "
-                            << linalgOp.getShapesToLoopsMap() << "\n");
+    // LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] "
+    //                         << "linalgOp's loop map is "
+    //                         << linalgOp.getShapesToLoopsMap() << "\n");
     // TODO: what does this block do? I need to find out.
     DominanceInfo dominanceInfo(tilingInterfaceOp);
     llvm::SmallDenseSet<Operation *> tiledAndFusedOps =
@@ -235,7 +315,8 @@ ZigzagTiling::tileAndFuseEach(RewriterBase &rewriter,
     OpBuilder b(tilingInterfaceOp);
     // first level of tiling
     // ArrayRef<ArrayRef<int64_t>> tileSizes = {{8}, {8}, {26}};
-    ArrayRef<ArrayRef<int64_t>> tileSizes = {{4}, {4}, {4}};
+    // ArrayRef<ArrayRef<int64_t>> tileSizes = {{4}, {4}, {4}};
+    ArrayRef<ArrayRef<int64_t>> tileSizes = {{0}, {25}, {240}};
     const auto &ts = ZigzagTiling::ZigZagTileSizeComputation(
         b, tilingInterfaceOp, tileSizes);
     // second level of tiling
@@ -243,17 +324,25 @@ ZigzagTiling::tileAndFuseEach(RewriterBase &rewriter,
     const auto &ts2 = ZigzagTiling::ZigZagTileSizeComputation(
         b, tilingInterfaceOp, tileSizes);
     // interchange vector
-    ArrayRef<int64_t> interchange = {2, 0, 1};
+    ArrayRef<int64_t> interchange = {0, 2, 1};
+    // ArrayRef<int64_t> interchange = {2, 0, 1};
     // ArrayRef<int64_t> interchange = {2, 1, 0};
     // ArrayRef<int64_t> interchange = {2, 3, 1, 0}; // causes stack dump
     // do something different based on the tilingLevel parameter.
     switch (tilingLevel) {
     case 87:
+      // std::stringstream ss;
+      // linalgOp.getShapesToLoopsMap().print(ss);
+      // ss << linalgOp.getShapesToLoopsMap();
+      linalgOp->emitRemark()
+          << "case 87: ZigZag Remark: current op's loop map is "
+          << linalgOp.getLibraryCallName() << "\n";
       // SCFTilingOptions &setTileSizes(ArrayRef<OpFoldResult> ts);
       tilingOptions.setTileSizes(ts);
       // tilingOptions.setTileSizeComputationFunction(ZigzagTiling::ZigZagTileSizeComputation);
       tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
       // tilingOptions.setInterchange(interchange); // TODO: interchange
+      interchange = {0, 2, 1};
       tilingOptions.setInterchange(interchange);
       break;
 
