@@ -71,9 +71,21 @@ Spatial Loops
 ---------------------------------------------------------------------------------------------
 ```
 
-loop_sizes: [1, 400, 1200]  /  [1,  16, 5] = tile sizes of  [1, 25, 240]
+**loop_sizes:** [1, 400, 1200]  /  [1,  16, 5] = tile sizes of  **[1, 25, 240]**
 
-## old notes with loop_dims [1, 1200, 400] 
+but remember, when putting in `ConfigureForSnitch.cpp`, tile sizes should be **[1, 240, 25]**!
+
+**interchange:** `l1Interchange = {0, 2, 1};`
+
+Performance Comparison:
+
+GrapeFruit (NsNet with one ZigZag-tiled layer): cycles 1525861
+
+NsNet2: cycles 1526186
+
+1526186 - 1525861= **325 cycles faster with ZigZag**
+
+## old notes with incorrect loop_dims [1, 1200, 400] 
 
 ZigZag Output
 

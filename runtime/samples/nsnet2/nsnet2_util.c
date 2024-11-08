@@ -10,6 +10,13 @@
 iree_status_t compiled_ns_net2_create(iree_vm_instance_t *, iree_allocator_t,
                                       iree_vm_module_t **);
 
+// copied from Quidditch/snitch_cluster/sw/snRuntime/src/riscv.h
+inline uint32_t snrt_mcycle() {
+  uint32_t register r;
+  asm volatile("csrr %0, mcycle" : "=r"(r) : : "memory");
+  return r;
+}
+
 int run_nsnet2_experiment(
     iree_hal_executable_library_query_fn_t implementation) {
   if (!snrt_is_dm_core()) return quidditch_dispatch_enter_worker_loop();
@@ -39,12 +46,15 @@ int run_nsnet2_experiment(
       .output_sizes = (const iree_host_size_t[]){IREE_ARRAYSIZE(*data)},
   };
 
+  unsigned long cycles = snrt_mcycle();
   IREE_CHECK_OK(run_model(&config));
+  unsigned long cycles_after = snrt_mcycle();
 
   for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
     double value = (*data)[i];
     printf("%f\n", value);
   }
+  printf("\ncycles %lu\n", cycles_after - cycles);
   free(data);
   return 0;
 }
