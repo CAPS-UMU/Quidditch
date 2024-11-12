@@ -81,6 +81,7 @@ struct QuidditchTargetOptions {
   std::string xDSLOptPath;
   std::string toolChainRoot;
   bool assertCompiled = false;
+  std::string zigzagTilingSchemes = ""; // added for Configure Using ZigZag Pass
   std::string zigzagTilingScheme = ""; // added for ZigZag Tiling Pass
   bool outputTiled = false;  // added for ZigZag Tiling Pass
   // TODO: This should actually be 112640 but DMA stack overflows. Ooopsie!
@@ -110,6 +111,10 @@ struct QuidditchTargetOptions {
         "iree-quidditch-toolchain-root", toolChainRoot, llvm::cl::cat(category),
         llvm::cl::desc("Path to the root directory of the Quidditch toolchain "
                        "(containing the toolchain file)"));
+    // added for Configure Using ZigZag Pass
+    binder.opt<std::string>(
+        "iree-quidditch-zigzag-tiling-schemes", zigzagTilingSchemes, llvm::cl::cat(category),
+        llvm::cl::desc("Path to the json file representing the ZigZag tiling schemes."));
     // added for ZigZag Tiling Pass
     binder.opt<std::string>(
         "iree-quidditch-zigzag-tiling-scheme", zigzagTilingScheme, llvm::cl::cat(category),
@@ -186,6 +191,9 @@ public:
     modulePassManager.addPass(createMaterializeUserConfigsPass());
     FunctionLikeNest funcPassManager(modulePassManager);
     funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
+    funcPassManager.addPass([&] {
+          return quidditch::createConfigureUsingZigzag({targetOptions.zigzagTilingSchemes});
+        });
   }
 
   void buildTranslationPassPipeline(IREE::HAL::ExecutableTargetAttr targetAttr,

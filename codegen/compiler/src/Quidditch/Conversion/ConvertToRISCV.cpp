@@ -157,7 +157,9 @@ void ConvertToRISCV::runOnOperation() {
     FailureOr<StringAttr> riscvAssembly =
         convertToRISCVAssembly(kernelOp, kernelName);
     if (failed(riscvAssembly)) {
+     // module->emitWarning()<<"\nRADDISH: (convertToRISCV) convert to RISCV assembly failed\n";
       if (assertCompiled) {
+      //  module->emitWarning()<<"\nRADDISH: (convertToRISCV) assertion that I compiled ALSO failed\n";
         signalPassFailure();
         return WalkResult::interrupt();
       }
@@ -165,6 +167,7 @@ void ConvertToRISCV::runOnOperation() {
       auto builder = IRRewriter(kernelOp);
       builder.inlineBlockBefore(&kernelOp.getBody().front(), kernelOp,
                                 kernelOp.getInputs());
+      //module->emitWarning()<<"\nRADDISH: (convertToRISCV) erasing the kernel op and continuing on...\n";
       kernelOp.erase();
       return WalkResult::advance();
     }

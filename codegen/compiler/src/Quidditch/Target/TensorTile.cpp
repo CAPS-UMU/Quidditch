@@ -239,7 +239,7 @@ void TensorTile::runOnOperation() {
   if(funcOp.getName() ==
          "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"){
           std::string level = (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" : "L1";
-          funcOp->emitWarning() << "Radish tiling level "<< level<<" This is the rewritten kernel!!!!!\n";
+          funcOp->emitWarning() << "CUCUMBER tiling level "<< level<<" This is the rewritten kernel!!!!!\n";
 
   }
    

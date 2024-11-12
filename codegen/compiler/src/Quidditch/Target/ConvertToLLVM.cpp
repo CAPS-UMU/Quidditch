@@ -62,6 +62,10 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+// debugging Raddish
+#include <sstream>
+#include <string>              // for string compare
+// debugging Raddish
 
 namespace quidditch {
 #define GEN_PASS_DEF_CONVERTTOLLVMPASS
@@ -937,6 +941,7 @@ static std::string getStringAttrFromTargetAttr(ModuleOp module,
 }
 
 void ConvertToLLVMPass::runOnOperation() {
+  std::stringstream ss; // debugging RADDISH
   auto module = getOperation();
   std::string dataLayoutStr =
       getStringAttrFromTargetAttr(module, "data_layout");
@@ -972,6 +977,8 @@ void ConvertToLLVMPass::runOnOperation() {
     populateConvertArmNeon2dToIntrPatterns(patterns);
     if (failed(applyPatternsAndFoldGreedily(getOperation(),
                                             std::move(patterns)))) {
+      ss << "\nRADDISH (q-convert-to-llvm) applyPatternsAndFoldGreedily failed :( line 980";
+      getOperation()->emitWarning() << ss.str();
       return signalPassFailure();
     }
   }
@@ -981,6 +988,8 @@ void ConvertToLLVMPass::runOnOperation() {
         vectorToLoopsPatterns, VectorTransferToSCFOptions().enableFullUnroll());
     if (failed(applyPatternsAndFoldGreedily(
             getOperation(), std::move(vectorToLoopsPatterns)))) {
+      ss << "\nRADDISH (q-convert-to-llvm) applyPatternsAndFoldGreedily failed :( line  991";
+      getOperation()->emitWarning() << ss.str();
       return signalPassFailure();
     }
   }
@@ -1064,6 +1073,8 @@ void ConvertToLLVMPass::runOnOperation() {
                            Snitch::QuidditchSnitchDialect>();
 
   if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+    ss << "\nRADDISH (q-convert-to-llvm) applyPartialConversion failed :'(";
+    getOperation()->emitWarning() << ss.str();
     signalPassFailure();
     return;
   }
@@ -1073,8 +1084,11 @@ void ConvertToLLVMPass::runOnOperation() {
     RewritePatternSet patterns(&getContext());
     patterns.insert<RewriteExternCallOpToDynamicImportCallOp, RewriteCallOpABI,
                     RewriteFuncOpABI>(abi, typeConverter);
-    if (failed(applyPatternsAndFoldGreedily(module, std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(module, std::move(patterns)))){
+      ss << "\nRADDISH (q-convert-to-llvm) `Rewrite any extern calls emitted to dynamic library imports` failed :(";
+      getOperation()->emitWarning() << ss.str();
       return signalPassFailure();
+    }
   }
 
   // Post conversion patterns.
@@ -1086,6 +1100,8 @@ void ConvertToLLVMPass::runOnOperation() {
       populateUnfusedFMAOpsPassPatterns(&getContext(), postPatterns);
     }
     if (failed(applyPatternsAndFoldGreedily(module, std::move(postPatterns)))) {
+      ss << "\nRADDISH (q-convert-to-llvm) Post conversion patterns failed :(";
+      getOperation()->emitWarning() << ss.str();
       return signalPassFailure();
     }
   }

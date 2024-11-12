@@ -29,8 +29,16 @@ def ConfigureForSnitchPass
   : InterfacePass<"quidditch-configure-for-snitch",
       "mlir::FunctionOpInterface">;
 
+def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::FunctionOpInterface"> {
+  let summary = "Wherever possible, Annotate linalg operations with ZigZag Tiling Schemes.";
+  let options = [
+    Option<"tilingSchemes", "tiling-schemes", "std::string", /*default=*/"",
+           "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
+  ];
+}
+
 def ZigzagTiling : InterfacePass<"zigzag-tile", "mlir::FunctionOpInterface"> {
-  let summary = "Use ZigZag tiling scheme to optimize linalg operations.";
+  let summary = "Optimize linalg operations according to a ZigZag Tiling Scheme.";
   //let constructor = "mlir::createZigzagTilingPass()";
   let options = [
     Option<"tilingScheme", "tiling-scheme", "std::string", /*default=*/"",

@@ -23,6 +23,7 @@ iree_cc_library(
         SRCS
         "ConvertToLLVM.cpp"
         "ConfigureForSnitch.cpp"
+        "ConfigureUsingZigzag.cpp"
         "DisableQuidditchVariant.cpp"
         "LinkExecutables.cpp"
         "PadToTilingConfig.cpp"

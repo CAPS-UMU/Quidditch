@@ -1,7 +1,7 @@
 
 iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64")
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --iree-quidditch-zigzag-tiling-scheme=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/grapeFruit-tiling-scheme.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-zigzag-tiling-scheme=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/grapeFruit-tiling-scheme.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-print-ir-after-failure --iree-quidditch-zigzag-tiling-schemes=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/grapeFruit-tiling-scheme.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-zigzag-tiling-schemes=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_1x1200x400_f64/grapeFruit-tiling-scheme.json)
 
 add_library(grapeFruit_util grapeFruit_util.c)
 target_link_libraries(grapeFruit_util

@@ -10,7 +10,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace quidditch {
-#define GEN_PASS_DEF_CONFIGUREFORSNITCHPASS
+#define GEN_PASS_DEF_CONFIGUREUSINGZIGZAG
 #include "Quidditch/Target/Passes.h.inc"
 } // namespace quidditch
 
@@ -18,8 +18,8 @@ using namespace mlir;
 using namespace mlir::iree_compiler;
 
 namespace {
-class ConfigureForSnitch
-    : public quidditch::impl::ConfigureForSnitchPassBase<ConfigureForSnitch> {
+class ConfigureUsingZigzag
+    : public quidditch::impl::ConfigureUsingZigzagBase<ConfigureUsingZigzag> {
 public:
   using Base::Base;
 
@@ -55,9 +55,11 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //   once + needing to copy back the result fewer times). This could
         //   come at the cost of concurrency for distributing workgroups but is
         //   only applicable once on Occamy.
+        rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
-        SmallVector<int64_t> l1Interchange = {2, 0, 1};
+        SmallVector<int64_t> l1Interchange = {0, 1,
+                                              2}; // no interchange by default
         bool dualBuffer = true;
 
         if (funcOp.getName() ==
@@ -65,6 +67,12 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           l1Tiles[0] = 0;
           l1Tiles[1] = 56;
           l1Tiles[2] = 100;
+          // zigzag
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 161;
+          // l1Tiles[2] = 100;
+          // l1Interchange = {0, 1, 2};
+          // funcOp->emitWarning() << "BLUEBIRD 9\n";
         }
         if (funcOp.getName() ==
             "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
@@ -72,24 +80,51 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           // TODO: Switch to 82 and true once correctness bugs are fixed.
           l1Tiles[2] = 0;
           dualBuffer = false;
+          // funcOp->emitWarning() << "BLUEBIRD 0\n";
+          // zigzag
+          // dualBuffer = false;
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 0;
+          // l1Tiles[2] = 0;
+          // l1Interchange = {0, 1, 2};
         }
         if (funcOp.getName() ==
             "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64") {
           l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
+          // zigzag
+          // funcOp->emitWarning() << "BLUEBIRD 7\n";
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 300;
+          // l1Tiles[2] = 250;
+          // l1Interchange = {0, 1, 2};
         }
         if (funcOp.getName() ==
             "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
           l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
+          // zigzag
+          // funcOp->emitWarning() << "BLUEBIRD 8!\n";
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 30;
+          // l1Tiles[2] = 200;
+          l1Interchange = {0, 1, 2};
+          dualBuffer = false;
         }
         if (funcOp.getName() ==
             "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 40;
+          // l1Tiles[2] = 100;
+          // zigzag
+          dualBuffer = false;
+          l1Interchange = {0, 2, 1};
           l1Tiles[0] = 0;
-          l1Tiles[1] = 40;
-          l1Tiles[2] = 100;
+          l1Tiles[1] = 240;
+          l1Tiles[2] = 25;
+          // funcOp->emitWarning() << "BLUEBIRD 1\n";
         }
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
@@ -100,30 +135,73 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
       .Default(success());
 }
 
-void ConfigureForSnitch::runOnOperation() {
-  FunctionOpInterface funcOp = getOperation();
-  if (getTranslationInfo(funcOp))
+void ConfigureUsingZigzag::runOnOperation() {
+  if (this->tilingSchemes.compare(
+          "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/"
+          "snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_"
+          "1x1200x400_f64/grapeFruit-tiling-scheme.json") != 0) {
     return;
+
+  } else {
+    getOperation()->emitWarning()
+        << "YODEL: found zigzag tiling scheme to process!\n";
+    //     if (!this->ts.valid) {
+    //   getOperation()->emitWarning()
+    //       << "valid: " << this->ts.valid
+    //       << " i found a ZigZag input :) tilingScheme is ["
+    //       << this->tilingScheme << "]\n";
+    //   this->ts.initialize(tilingScheme);
+    //   getOperation()->emitWarning()
+    //       << "zigzag parsed tilingScheme is [" << this->ts.str()
+    //       << "] valid: " << this->ts.valid << "\n";
+    // }
+  }
+  FunctionOpInterface funcOp = getOperation();
+  // if (getTranslationInfo(funcOp))
+  //   return;
+
+  funcOp->emitWarning()
+      << "YODEL: inside runOperation of configureUsingZigzag\n";
 
   SmallVector<Operation *> computeOps = getComputeOps(funcOp);
   FailureOr<Operation *> rootOp = getRootOperation(computeOps);
-  if (failed(rootOp))
+  /*
+  Find the root operation for the dispatch region. The priority is:
+
+A Linalg operation that has reduction loops.
+Any other Linalg op or LinalgExt op.
+An operation that implements TilingInterface.
+If there are multiple operations meeting the same priority, the one closer
+to the end of the function is the root op.
+   */
+  if (failed(rootOp)) {
+    getOperation()->emitWarning() << "YODEL: couldn't find root op!\n";
     return signalPassFailure();
+  }
+
   Operation *rootOperation = rootOp.value();
-  if (!rootOperation)
+  if (!rootOperation) {
+    getOperation()->emitWarning()
+        << "YODEL: found the root op, but it doesn't have a value!\n";
     return;
+  }
 
   // Set the same translation info for all functions right now.
   // This should move into 'setRootConfig' if we gain different pass pipelines
   // for different kernels.
-  if (failed(setTranslationInfo(funcOp)))
-    return signalPassFailure();
+  // if (failed(setTranslationInfo(funcOp)))
+  //   return signalPassFailure();
 
   auto loweringConfig =
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
-  if (!loweringConfig)
-    if (failed(setRootConfig(funcOp, rootOperation)))
-      return signalPassFailure();
+  if (!loweringConfig) { // if the root operation has tiling settings, destroy
+                         // them
+    eraseLoweringConfig(rootOperation); // destroy any previous tiling settings
+  }
+  // TODO: instead of only thinking about rootOp, should tile ALL the linalg ops inside (i think!)
+  if (failed(setRootConfig(funcOp, rootOperation))) {
+    return signalPassFailure();
+  }
 
   // The root configuration setting introduces `tensor.dim` operations.
   // Resolve those away.

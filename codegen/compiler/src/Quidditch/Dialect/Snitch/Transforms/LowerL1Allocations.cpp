@@ -64,7 +64,6 @@ void LowerL1Allocations::runOnOperation() {
       history << shape << " ";
     }
     history << "\n";
-  
   }
   history << "Well, those were all the allocOps... =_=\n";
   // radish ^^^^^^^^^^
@@ -136,11 +135,10 @@ void LowerL1Allocations::runOnOperation() {
     uint64_t memRefSize = llvm::divideCeil(bitWidth, 8);
 
     history << "memref size is " << memRefSize << "\n";
-    
+
     memRefSize *= allocElements;
 
     offset += memRefSize;
-
 
     history << "allocElements is " << allocElements << "\n";
 
@@ -175,11 +173,10 @@ void LowerL1Allocations::runOnOperation() {
       getOperation().getBlocks().clear();
       return;
     }
-
   }
 
   // radish vvv
-  getOperation()->emitWarning() << history.str();
+  // getOperation()->emitWarning() << history.str();
   // radish ^^^
 
   // Change any leftover memory space occurrences.
@@ -197,12 +194,12 @@ void LowerL1Allocations::runOnOperation() {
                                         /*replaceLocs=*/false,
                                         /*replaceTypes=*/true);
 
-  //getOperation()->emitWarning() << "Not sure if this will work, but let's try to view the kernel after EVERYTHING has finished\n\n";
-  FunctionOpInterface funcOp = getOperation();
-   if(funcOp.getName() ==
-         "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"){
-        
-          funcOp->emitWarning() << "Turnip EVERYTHING is over!!\n";
+  // getOperation()->emitWarning() << "Not sure if this will work, but let's try
+  // to view the kernel after EVERYTHING has finished\n\n";
+  // FunctionOpInterface funcOp = getOperation();
+  // if (funcOp.getName() ==
+  //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
 
-  }
+  //   funcOp->emitWarning() << "Turnip EVERYTHING is over!!\n";
+  // }
 }
