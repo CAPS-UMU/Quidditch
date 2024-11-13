@@ -64,18 +64,21 @@ module {
     %2 = bufferization.to_memref %arg2 : memref<1x1200xf64, strided<[?, ?], offset: ?>>
     %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x1200xf64>
     memref.copy %2, %alloc : memref<1x1200xf64, strided<[?, ?], offset: ?>> to memref<1x1200xf64>
-    affine.for %arg3 = 0 to 1 {
-      affine.for %arg4 = 0 to 1200 {
-        affine.for %arg5 = 0 to 400 {
-          %4 = affine.load %1[%arg3, %arg5] : memref<1x400xf64, strided<[?, ?], offset: ?>>
-          %5 = affine.load %0[%arg4, %arg5] : memref<1200x400xf64, strided<[?, ?], offset: ?>>
-          %6 = affine.load %alloc[%arg3, %arg4] : memref<1x1200xf64>
+    affine.for %arg3 = 0 to 1 {        // A
+      affine.for %arg4 = 0 to 1200 {   // B
+        affine.for %arg5 = 0 to 400 {  // C
+          %4 = affine.load %1[%arg3, %arg5] // I[A][C]
+          : memref<1x400xf64, strided<[?, ?], offset: ?>>
+          %5 = affine.load %0[%arg4, %arg5] // W[B][C]
+          : memref<1200x400xf64, strided<[?, ?], offset: ?>>
+          %6 = affine.load %alloc[%arg3, %arg4] // O[A][B] 
+          : memref<1x1200xf64>
           %7 = arith.mulf %4, %5 : f64
           %8 = arith.addf %6, %7 : f64
           affine.store %8, %alloc[%arg3, %arg4] : memref<1x1200xf64>
         }
       }
-    }
+    } // So really, O[A][B] += I[A][C] * W[B][C]
     %3 = bufferization.to_tensor %alloc : memref<1x1200xf64>
     memref.dealloc %alloc : memref<1x1200xf64>
     return %3 : tensor<1x1200xf64>

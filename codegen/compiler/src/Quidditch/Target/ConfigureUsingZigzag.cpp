@@ -55,24 +55,17 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //   once + needing to copy back the result fewer times). This could
         //   come at the cost of concurrency for distributing workgroups but is
         //   only applicable once on Occamy.
-        rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
-        SmallVector<int64_t> l1Interchange = {0, 1,
-                                              2}; // no interchange by default
+        SmallVector<int64_t> l1Interchange = {
+            2, 0, 1}; // quidditch interchange by default
         bool dualBuffer = true;
 
         if (funcOp.getName() ==
             "main$async_dispatch_9_matmul_transpose_b_1x161x600_f64") {
-          l1Tiles[0] = 0;
+              l1Tiles[0] = 0;
           l1Tiles[1] = 56;
           l1Tiles[2] = 100;
-          // zigzag
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 161;
-          // l1Tiles[2] = 100;
-          // l1Interchange = {0, 1, 2};
-          // funcOp->emitWarning() << "BLUEBIRD 9\n";
         }
         if (funcOp.getName() ==
             "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
@@ -80,51 +73,28 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           // TODO: Switch to 82 and true once correctness bugs are fixed.
           l1Tiles[2] = 0;
           dualBuffer = false;
-          // funcOp->emitWarning() << "BLUEBIRD 0\n";
-          // zigzag
-          // dualBuffer = false;
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 0;
-          // l1Tiles[2] = 0;
-          // l1Interchange = {0, 1, 2};
         }
         if (funcOp.getName() ==
             "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64") {
-          l1Tiles[0] = 0;
+            l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
-          // zigzag
-          // funcOp->emitWarning() << "BLUEBIRD 7\n";
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 300;
-          // l1Tiles[2] = 250;
-          // l1Interchange = {0, 1, 2};
         }
         if (funcOp.getName() ==
             "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
           l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
-          // zigzag
-          // funcOp->emitWarning() << "BLUEBIRD 8!\n";
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 30;
-          // l1Tiles[2] = 200;
-          l1Interchange = {0, 1, 2};
-          dualBuffer = false;
         }
         if (funcOp.getName() ==
-            "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 40;
-          // l1Tiles[2] = 100;
+            "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") { // tiled by ZigZag
+               rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
           // zigzag
-          dualBuffer = false;
-          l1Interchange = {0, 2, 1};
+          l1Interchange = {0, 1, 2};
           l1Tiles[0] = 0;
           l1Tiles[1] = 240;
-          l1Tiles[2] = 25;
-          // funcOp->emitWarning() << "BLUEBIRD 1\n";
+          l1Tiles[2] = 40;
+          dualBuffer = false;
         }
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
@@ -137,9 +107,8 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
 void ConfigureUsingZigzag::runOnOperation() {
   if (this->tilingSchemes.compare(
-          "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/"
-          "snitch-cluster-only-floats-no-ssrs-dispatch_1_matmul_transpose_b_"
-          "1x1200x400_f64/grapeFruit-tiling-scheme.json") != 0) {
+          "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/"
+          "zigzag-tiled-nsnet.json") != 0) {
     return;
 
   } else {
@@ -157,11 +126,13 @@ void ConfigureUsingZigzag::runOnOperation() {
     // }
   }
   FunctionOpInterface funcOp = getOperation();
-  // if (getTranslationInfo(funcOp))
-  //   return;
+  if (getTranslationInfo(funcOp)){
+    eraseTranslationInfo(funcOp);
+  }
+  
 
-  funcOp->emitWarning()
-      << "YODEL: inside runOperation of configureUsingZigzag\n";
+  // funcOp->emitWarning()
+  //     << "YODEL: inside runOperation of configureUsingZigzag\n";
 
   SmallVector<Operation *> computeOps = getComputeOps(funcOp);
   FailureOr<Operation *> rootOp = getRootOperation(computeOps);
@@ -189,8 +160,8 @@ to the end of the function is the root op.
   // Set the same translation info for all functions right now.
   // This should move into 'setRootConfig' if we gain different pass pipelines
   // for different kernels.
-  // if (failed(setTranslationInfo(funcOp)))
-  //   return signalPassFailure();
+  if (failed(setTranslationInfo(funcOp)))
+    return signalPassFailure();
 
   auto loweringConfig =
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
@@ -198,7 +169,8 @@ to the end of the function is the root op.
                          // them
     eraseLoweringConfig(rootOperation); // destroy any previous tiling settings
   }
-  // TODO: instead of only thinking about rootOp, should tile ALL the linalg ops inside (i think!)
+  // TODO: instead of only thinking about rootOp, should tile ALL the linalg ops
+  // inside (i think!)
   if (failed(setRootConfig(funcOp, rootOperation))) {
     return signalPassFailure();
   }
