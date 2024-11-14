@@ -8,10 +8,10 @@
 int main() {
 
   // statically allocate space for input/output and solution matrices.
-  iree_alignas(64) double a[16];
-  iree_alignas(64) double b[16];
-  iree_alignas(64) double c[16];
-  iree_alignas(64) double golden[16];
+  iree_alignas(64) double a[4096];
+  iree_alignas(64) double b[4096];
+  iree_alignas(64) double c[4096];
+  iree_alignas(64) double golden[4096];
   if (!snrt_is_dm_core()) return quidditch_dispatch_enter_worker_loop();
 
   // initialize matrices
@@ -19,7 +19,7 @@ int main() {
     a[i] = 2;
     b[i] = 3;
     c[i] = 0;
-    golden[i] = 147;
+    golden[i] = 5;
   }
 
   model_config_t config = {
@@ -41,9 +41,9 @@ int main() {
                                                 IREE_ARRAYSIZE(c)},
       .input_ranks = (const iree_host_size_t[]){2, 2, 2},
       .input_shapes =
-          (const iree_hal_dim_t*[]){(iree_hal_dim_t[]){4, 4},
-                                    (iree_hal_dim_t[]){4, 4},
-                                    (iree_hal_dim_t[]){4, 4}},
+          (const iree_hal_dim_t*[]){(iree_hal_dim_t[]){64, 64},
+                                    (iree_hal_dim_t[]){64, 64},
+                                    (iree_hal_dim_t[]){64, 64}},
 
       .num_outputs = 1,
       .output_data = (void*[]){c},

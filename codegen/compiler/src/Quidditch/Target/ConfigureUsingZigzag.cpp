@@ -63,7 +63,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         if (funcOp.getName() ==
             "main$async_dispatch_9_matmul_transpose_b_1x161x600_f64") {
-              l1Tiles[0] = 0;
+          l1Tiles[0] = 0;
           l1Tiles[1] = 56;
           l1Tiles[2] = 100;
         }
@@ -73,28 +73,48 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           // TODO: Switch to 82 and true once correctness bugs are fixed.
           l1Tiles[2] = 0;
           dualBuffer = false;
+          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
+          // l1Interchange = {0, 1, 2};
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 0;
+          // l1Tiles[2] = 0;
+          // dualBuffer = false;
         }
         if (funcOp.getName() ==
             "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64") {
-            l1Tiles[0] = 0;
+          l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
+          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 30;
+          // l1Tiles[2] = 40;
+          // l1Interchange = {0, 1, 2}; 
         }
         if (funcOp.getName() ==
             "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
           l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
+          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 200;
+          // l1Tiles[2] = 5;
+          // l1Interchange = {0, 1, 2}; 
         }
-        if (funcOp.getName() ==
-            "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") { // tiled by ZigZag
-               rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
-          // zigzag
-          l1Interchange = {0, 1, 2};
-          l1Tiles[0] = 0;
-          l1Tiles[1] = 240;
-          l1Tiles[2] = 40;
+        if (funcOp.getName() == "main$async_dispatch_1_matmul_transpose_b_"
+                                "1x1200x400_f64") { // tiled by ZigZag
+          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
           dualBuffer = false;
+          l1Tiles[0] = 0;
+          l1Tiles[1] = 40;
+          l1Tiles[2] = 100;
+          // zigzag
+          // l1Interchange = {0, 1, 2};
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 240;
+          // l1Tiles[2] = 40;
+          // dualBuffer = false;
         }
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
@@ -112,8 +132,8 @@ void ConfigureUsingZigzag::runOnOperation() {
     return;
 
   } else {
-    getOperation()->emitWarning()
-        << "YODEL: found zigzag tiling scheme to process!\n";
+    // getOperation()->emitWarning()
+    //     << "YODEL: found zigzag tiling scheme to process!\n";
     //     if (!this->ts.valid) {
     //   getOperation()->emitWarning()
     //       << "valid: " << this->ts.valid
@@ -126,10 +146,9 @@ void ConfigureUsingZigzag::runOnOperation() {
     // }
   }
   FunctionOpInterface funcOp = getOperation();
-  if (getTranslationInfo(funcOp)){
+  if (getTranslationInfo(funcOp)) {
     eraseTranslationInfo(funcOp);
   }
-  
 
   // funcOp->emitWarning()
   //     << "YODEL: inside runOperation of configureUsingZigzag\n";
