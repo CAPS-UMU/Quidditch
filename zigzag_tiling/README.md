@@ -2,18 +2,22 @@
 
 This is the landing page for all things ZigZag tiling in Quidditch.
 
-**Most Recent Updates**
+[TOC]
+
+
+
+### Most Recent Updates
 
 - I tried to manually tile xDSL-supported NsNet kernels [here](grapeFruit/zigzag-tiled-nsnet/README.md). Only one can be tiled with zigzag-y* tile sizes (in the other cases, Quidditch breaks).
 
-- I tiled this one working-nsnet-kernel with zigzag-y tile sizes but it's [slower than the previous tiling](#III.-GrapeFruit-(NsNet2-with-one-ZigZag-y-tiled-kernel)). There are few different reasons this could be, the most likely that my zizgag cost model does not accurately represent parts of the snitch cluster (does not account for snitch extensions). But the way quidditch allocates space in L1 includes more than one kernel at a time...
+- I tiled this one working-nsnet-kernel with zigzag-y tile sizes but it's [slower than the previous tiling](#III.-GrapeFruit-(NsNet2-with-one-ZigZag-y-tiled-kernel))(see section IV below). There are few different reasons this could be, the most likely that my zigzag cost model does not accurately represent parts of the snitch cluster (does not account for snitch extensions). But the way quidditch allocates space in L1 includes more than one kernel at a time...
 - To run a more isolated example, my current steps are to bypass the xDSL backend and use iree's llvm backend, but still run on the snitch cluster (just as a cluster of generic riscv cores). This would allow me to hook into the quidditch front end, and then bypass the xDSL backend for certain kernels so I can test them isolated from the xDSL kernel generation.
 - I am tiling at the tensor level (before bufferization). In the future, I would would like to modify Quidditch's bufferization pass to allow for the exact memory transfers from L3 to L1 that ZigZag prescribes. 
 - Right now, I just want to get a simple kernel fully tiled by ZigZag (including the specific memory transfers from L3 to L1) running with the Quidditch front end and LLVM by-pass backend. Once I have that working, I should be able to test better why the ZigZag tiling seems to make performance worse.
 
 **Quidditch's `TensorTile` pass does not support multi-level tiling. " Zigzag-y" tile sizes refer to  ZigZag tiling schemes flattened/modified to only tile each dimension once.*
 
-## Daily Use Commands
+## 0. Daily Use Commands
 
 Inside `Quidditch` directory, do
 
@@ -33,7 +37,7 @@ Run test case with
 someday I will make a script
 ```
 
-## 0. Setup Notes 
+## I. Setup Notes 
 
 1. Clone the repo *with* its submodules
 
@@ -86,7 +90,7 @@ someday I will make a script
 ninja -j 20
    ```
 
- ## I. Run a test case
+ ## II. Run a test case
 
 To list all test cases, navigate to the `<build-directory>` or `<build-directory>/runtime`, then do
 
@@ -102,19 +106,18 @@ ctest -R vec_multiply
 
 (picking a test case name from the list printed out by the previously executed `-N` command)
 
-## II. Manually Tile NsNet2 with ZigZag
+## III. Manually Tile NsNet2 with ZigZag
 
 - Ran ZigZag on each kernel offline ([details here](https://github.com/CAPS-UMU/Quidditch/tree/zigzag/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet#zigzag-tiled-nsnet))
 - [ConfigureUsingZigZag](../codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp) annotates the linalg ops with zigzag tile sizes (wherever possible)
 - [TensorTile](../codegen/compiler/src/Quidditch/Target/TensorTile.cpp) performs the actual tiling transformation
 - Full Quidditch Pass Pipeline defined in [this file](../codegen/compiler/src/Quidditch/Target/QuidditchTarget.cpp)
 
-## III. GrapeFruit (NsNet2 with one ZigZag-y tiled kernel)
+## IV. GrapeFruit (NsNet2 with one ZigZag-y tiled kernel)
 
 - GrapeFruit is a copy of the NsNet2 test case.
 - The only difference between GrapeFruit and NsNet2 is that when the `ConfigureUsingZigZag` pass runs, the kernel `main$async_dispatch_8_matmul_transpose_b_1x600x600_f64` gets tiled with ZigZag tile sizes.
-- Full Quidditch Pass Pipeline defined in [this file](../codegen/compiler/src/Quidditch/Target/QuidditchTarget.cpp)
-- `ConfigureUsingZigZag` pass defined [here](../codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp)
+- Here is the [exact spot](https://github.com/CAPS-UMU/Quidditch/blob/7a911cca8e39c5de81ad7745ba93b5df31db5800/codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp#L127) inside the `ConfigureUsingZigzag` pass where the ZigZag-y tile sizes are set.
 
 Apparently it's slower than Quidditch's default tiling, despite [ZigZag's estimates](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_8_matmul_transpose_b_1x600x600_f64_latency_est.md#latency-estimate).
 
@@ -124,7 +127,7 @@ Apparently it's slower than Quidditch's default tiling, despite [ZigZag's estima
 | GrapeFruit (NeNet2 with one zigzag-tiled matmul transpose) | 1410139     | 107527.0                                                     |
 | NsNet2 / GrapeFruit                                        | 0.787       | 1.346                                                        |
 
-## IV. Automate ZigZag Tiling
+## V. Automate ZigZag Tiling
 
 - Work In Progress
 - [ConfigureUsingZigZag](../codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp) is planned to eventually

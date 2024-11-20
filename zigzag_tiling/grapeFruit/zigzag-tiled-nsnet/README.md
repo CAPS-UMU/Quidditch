@@ -25,9 +25,7 @@ Commands run to get cycle count:
 /home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/GrapeFruit
 ```
 
-## "Zigzag-y" tiling configs
-
-*"ZigZag-y" instead of "ZigZag" because Quidditch's `TensorTile` pass does not support multi-level tiling. The configurations listed below are ZigZag tiling schemes modified to only tile each dimension once.*
+## Zigzag-y* tiling configs
 
 - ["main$async_dispatch_9_matmul_transpose_b_1x161x600_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_9_matmul_transpose_b_1x161x600_f64.md)
 
