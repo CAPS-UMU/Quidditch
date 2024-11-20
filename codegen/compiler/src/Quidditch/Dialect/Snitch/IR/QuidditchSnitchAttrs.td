@@ -55,7 +55,8 @@ def QuidditchSnitch_LoweringConfigAttr : QuidditchSnitch_Attr<"LoweringConfig",
     TileSizeList:$workgroup_tiles,
     TileSizeList:$l1_tiles,
     TileInterchangeList:$l1_tiles_interchange,
-    DefaultValuedParameter<"bool", "false">:$dual_buffer
+    DefaultValuedParameter<"bool", "false">:$dual_buffer,
+    DefaultValuedParameter<"uint64_t", "0">:$zigzagID
   );
 
   let builders = [
@@ -63,7 +64,8 @@ def QuidditchSnitch_LoweringConfigAttr : QuidditchSnitch_Attr<"LoweringConfig",
       CArg<"llvm::ArrayRef<int64_t>", "{}">:$workgroupTiles,
       CArg<"llvm::ArrayRef<int64_t>", "{}">:$l1Tiles,
       CArg<"llvm::ArrayRef<int64_t>", "{}">:$l1TilesInterchange,
-      CArg<"bool", "false">:$dualBuffer
+      CArg<"bool", "false">:$dualBuffer,
+      CArg<"uint64_t", "0">:$zigzagID
     )>
   ];
 

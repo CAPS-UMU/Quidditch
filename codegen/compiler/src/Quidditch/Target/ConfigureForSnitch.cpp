@@ -87,7 +87,6 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         }
         if (funcOp.getName() ==
             "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
-          dualBuffer = false; // turned off to compare it with GrapeFruit
           l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;

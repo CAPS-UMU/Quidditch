@@ -30,10 +30,13 @@ def ConfigureForSnitchPass
       "mlir::FunctionOpInterface">;
 
 def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::FunctionOpInterface"> {
-  let summary = "Wherever possible, Annotate linalg operations with ZigZag Tiling Schemes.";
+  let summary = "Annotate linalg operations with ZigZag Tiling Schemes, OR export linalg ops as ZigZag workloads.";
+  //let constructor = "createConfigureUsingZigzag()";
   let options = [
     Option<"tilingSchemes", "tiling-schemes", "std::string", /*default=*/"",
            "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
+    Option<"workloads", "workloads", "std::string", /*default=*/"",
+           "Name of a yaml file to which we export the zigzag workload representation of each linalg operation.">,
   ];
 }
 

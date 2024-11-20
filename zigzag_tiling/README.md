@@ -2,16 +2,20 @@
 
 This is the landing page for all things ZigZag tiling in Quidditch.
 
-Most Recent Updates:
-- I tried to manually tile xDSL-supported nsnet kernels [here](https://github.com/CAPS-UMU/Quidditch/tree/zigzag/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet#zigzag-tiled-nsnet). Only one can be tiled with zigzag-y tile sizes (in the other cases, quidditch breaks).
-- I tiled this one nsnet kernel with zigzag-y tile sizes but it's [slower than the previous tiling](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_1_matmul_transpose_b_1x1200x400_f64_plan_comparison.md#zigzag-estimation-vs-quidditch-performance). There are few different reasons this could be, the most likely that my zizgag cost model does not accurately represent parts of the snitch cluster (does not account for snitch extensions). But also I had to disable quidditch double buffering, and the way quidditch allocates space in L1 includes more than one kernel at a time...
+**Most Recent Updates**
+
+- I tried to manually tile xDSL-supported NsNet kernels [here](grapeFruit/zigzag-tiled-nsnet/README.md). Only one can be tiled with zigzag-y* tile sizes (in the other cases, Quidditch breaks).
+
+- I tiled this one working-nsnet-kernel with zigzag-y tile sizes but it's [slower than the previous tiling](#III.-GrapeFruit-(NsNet2-with-one-ZigZag-y-tiled-kernel)). There are few different reasons this could be, the most likely that my zizgag cost model does not accurately represent parts of the snitch cluster (does not account for snitch extensions). But the way quidditch allocates space in L1 includes more than one kernel at a time...
 - To run a more isolated example, my current steps are to bypass the xDSL backend and use iree's llvm backend, but still run on the snitch cluster (just as a cluster of generic riscv cores). This would allow me to hook into the quidditch front end, and then bypass the xDSL backend for certain kernels so I can test them isolated from the xDSL kernel generation.
 - I am tiling at the tensor level (before bufferization). In the future, I would would like to modify Quidditch's bufferization pass to allow for the exact memory transfers from L3 to L1 that ZigZag prescribes. 
 - Right now, I just want to get a simple kernel fully tiled by ZigZag (including the specific memory transfers from L3 to L1) running with the Quidditch front end and LLVM by-pass backend. Once I have that working, I should be able to test better why the ZigZag tiling seems to make performance worse.
 
+**Quidditch's `TensorTile` pass does not support multi-level tiling. " Zigzag-y" tile sizes refer to  ZigZag tiling schemes flattened/modified to only tile each dimension once.*
+
 ## Daily Use Commands
 
-Inside Quidditch directory, do
+Inside `Quidditch` directory, do
 
 ```
 source ./venv/bin/activate && cd zigzag_tiling
@@ -77,356 +81,56 @@ someday I will make a script
    ```
 
 10. Build with `-j` set to number of cores (use `nproc --all` to determine number of cores on your system)
+
    ```
-   ninja -j 20
+ninja -j 20
    ```
 
  ## I. Run a test case
 
 To list all test cases, navigate to the `<build-directory>` or `<build-directory>/runtime`, then do
+
 ```
 ctest -N runtime-tests
 ```
 
 To run a specific test case, navigate to `<build-directory>/runtime`, then do
+
 ```
 ctest -R vec_multiply
 ```
 
 (picking a test case name from the list printed out by the previously executed `-N` command)
 
-## II. Integrate ZigZag Tiling Pass into Quidditch
+## II. Manually Tile NsNet2 with ZigZag
 
-```
-/home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/calabaza/calabaza
-```
+- Ran ZigZag on each kernel offline ([details here](https://github.com/CAPS-UMU/Quidditch/tree/zigzag/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet#zigzag-tiled-nsnet))
+- [ConfigureUsingZigZag](../codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp) annotates the linalg ops with zigzag tile sizes (wherever possible)
+- [TensorTile](../codegen/compiler/src/Quidditch/Target/TensorTile.cpp) performs the actual tiling transformation
+- Full Quidditch Pass Pipeline defined in [this file](../codegen/compiler/src/Quidditch/Target/QuidditchTarget.cpp)
 
+## III. GrapeFruit (NsNet2 with one ZigZag-y tiled kernel)
 
+- GrapeFruit is a copy of the NsNet2 test case.
+- The only difference between GrapeFruit and NsNet2 is that when the `ConfigureUsingZigZag` pass runs, the kernel `main$async_dispatch_8_matmul_transpose_b_1x600x600_f64` gets tiled with ZigZag tile sizes.
+- Full Quidditch Pass Pipeline defined in [this file](../codegen/compiler/src/Quidditch/Target/QuidditchTarget.cpp)
+- `ConfigureUsingZigZag` pass defined [here](../codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp)
 
-Files to take note of
+Apparently it's slower than Quidditch's default tiling, despite [ZigZag's estimates](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_8_matmul_transpose_b_1x600x600_f64_latency_est.md#latency-estimate).
 
-- [quidditch_module.cmake](../runtime/cmake/quidditch_module.cmake)
-- [runtime/tests/cmakelists.txt](../runtime/tests/CMakeLists.txt)
-
-Invoking the iree compiler: `build/codegen/iree-configuration/iree/tools/iree-compile --help`
-
-- I added a test case to Quidditch called pomelo. To run build and the run the pomelo test case, I do
-
-```
-cd build;
-
-ninja -j 20
-```
-
-```
-/home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/pomelo/pomelo
-/home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/nsnet2/NsNet2
-/home/hoppip/Quidditch/build/runtime/samples/nsnet2/NsNet2
-cd build/runtime; ctest -R pomelo
-```
-
-How do I see the IR after my pass? How do I pass options in to the iree compiler when using cmakelists.txt/a test case?
-
-```
-#############################################
-# Custom command for samples/pomelo/pamplemousse/pamplemousse_module.h
-
-build samples/pomelo/pamplemousse/pamplemousse_module.h samples/pomelo/pamplemousse/pamplemousse.o samples/pomelo/pamplemousse/pamplemousse.h samples/pomelo/pamplemousse/pamplemousse_llvm.h | ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_module.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.o ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_llvm.h: 
-
-CUSTOM_COMMAND 
-/home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir /home/hoppip/Quidditch/venv/bin/xdsl-opt /home/hoppip/Quidditch/toolchain/bin/pulp-as || 
-iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects 
-iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects 
-iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a 
-iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a 
-iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects 
-iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a 
-iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/pomelo && 
-  /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile 
-  --iree-vm-bytecode-module-strip-source-map=true 
-  --iree-vm-emit-polyglot-zip=false --iree-input-type=auto 
-  --iree-input-demote-f64-to-f32=0 
-  --iree-hal-target-backends=quidditch 
-  --iree-quidditch-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse.o 
-  --iree-quidditch-xdsl-opt-path=/home/hoppip/Quidditch/venv/bin/xdsl-opt 
-  --iree-quidditch-toolchain-root=/home/hoppip/Quidditch/toolchain 
-  --iree-quidditch-assert-compiled=true 
-  --output-format=vm-c 
-  --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir -o /home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse_module.h
-  
-  DESC = Generating pamplemousse/pamplemousse_module.h, pamplemousse/pamplemousse.o, pamplemousse/pamplemousse.h, pamplemousse/pamplemousse_llvm.h
-  restat = 1
-```
-
-Add options here: ` Quidditch/codegen/compiler/src/Quidditch/Target/QuidditchTarget.cpp`
-
-Options seem to be getting passed:
-
-```
-#############################################
-# Custom command for samples/pomelo/pamplemousse/pamplemousse_module.h
-
-build samples/pomelo/pamplemousse/pamplemousse_module.h samples/pomelo/pamplemousse/pamplemousse.o samples/pomelo/pamplemousse/pamplemousse.h samples/pomelo/pamplemousse/pamplemousse_llvm.h | ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_module.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.o ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse.h ${cmake_ninja_workdir}samples/pomelo/pamplemousse/pamplemousse_llvm.h: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir /home/hoppip/Quidditch/venv/bin/xdsl-opt /home/hoppip/Quidditch/toolchain/bin/pulp-as || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/pomelo && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-codegen-llvm-verbose-debug-info --iree-quidditch-zigzag-tiling-scheme=hoodle.json --iree-quidditch-output-tiled=true --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=quidditch --iree-quidditch-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse.o --iree-quidditch-xdsl-opt-path=/home/hoppip/Quidditch/venv/bin/xdsl-opt --iree-quidditch-toolchain-root=/home/hoppip/Quidditch/toolchain --iree-quidditch-assert-compiled=true --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/runtime/samples/pomelo/pamplemousse.mlir -o /home/hoppip/Quidditch/build/runtime/samples/pomelo/pamplemousse/pamplemousse_module.h
-  DESC = Generating pamplemousse/pamplemousse_module.h, pamplemousse/pamplemousse.o, pamplemousse/pamplemousse.h, pamplemousse/pamplemousse_llvm.h
-  restat = 1
-```
-
-
-
-## III. Manually Tile nsnet with ZigZag
-
-### What are the kernels IREE breaks nsnet into?
-
-TODO
-
-### How does ZigZag recommend these kernels get tiled?
-
-- use [this file](https://github.com/EmilySillars/zigzag/blob/manual-examples/modeling-snitch-with-zigzag.md) as reference, but redo for an L1 cache size of 100,000 bytes and float register files.
-- other tiling restrictions: row dimensions must be divisible by 8, make col dimensions as large as possible.
-
-TODO
+| Test File Name                                             | Cycle count | [ZigZag Latency Estimate](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_8_matmul_transpose_b_1x600x600_f64_latency_est.md#latency-estimate) |
+| ---------------------------------------------------------- | ----------- | ------------------------------------------------------------ |
+| NsNet2                                                     | 1110267     | 144731.0                                                     |
+| GrapeFruit (NeNet2 with one zigzag-tiled matmul transpose) | 1410139     | 107527.0                                                     |
+| NsNet2 / GrapeFruit                                        | 0.787       | 1.346                                                        |
 
 ## IV. Automate ZigZag Tiling
 
-TODO
-
-
-
-## V. GrapeFruit
-
-Commands used to build nsnet example:
-```
-#############################################
-# Custom command for samples/nsnet2/nsnet2.mlirbc
-
-build samples/nsnet2/nsnet2.mlirbc | ${cmake_ninja_workdir}samples/nsnet2/nsnet2.mlirbc: CUSTOM_COMMAND /home/hoppip/Quidditch/runtime/samples/nsnet2/NsNet2.py || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/nsnet2 && /home/hoppip/Quidditch/venv/bin/python3.11 /home/hoppip/Quidditch/runtime/samples/nsnet2/NsNet2.py /home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2.mlirbc --dtype=f64
-  DESC = Translating NsNet2 using iree-turbine
-  restat = 1
-
-
-#############################################
-# Custom command for samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h
-
-build samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h samples/nsnet2/nsnet2_llvm/nsnet2_llvm.h samples/nsnet2/nsnet2_llvm/nsnet2_llvm.o | ${cmake_ninja_workdir}samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h ${cmake_ninja_workdir}samples/nsnet2/nsnet2_llvm/nsnet2_llvm.h ${cmake_ninja_workdir}samples/nsnet2/nsnet2_llvm/nsnet2_llvm.o: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile samples/nsnet2/nsnet2.mlirbc || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/nsnet2 && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=llvm-cpu --iree-llvmcpu-debug-symbols=true --iree-llvmcpu-target-triple=riscv32-unknown-elf --iree-llvmcpu-target-cpu=generic-rv32 --iree-llvmcpu-target-cpu-features=+m,+f,+d,+zfh --iree-llvmcpu-target-abi=ilp32d --iree-llvmcpu-target-float-abi=hard --iree-llvmcpu-link-embedded=false --iree-llvmcpu-link-static --iree-llvmcpu-number-of-threads=8 --iree-llvmcpu-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2_llvm/nsnet2_llvm.o --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2.mlirbc -o /home/hoppip/Quidditch/build/runtime/samples/nsnet2/nsnet2_llvm/nsnet2_llvm_module.h
-  DESC = Generating nsnet2_llvm/nsnet2_llvm_module.h, nsnet2_llvm/nsnet2_llvm.h, nsnet2_llvm/nsnet2_llvm.o
-  restat = 1
-```
-Custom commands for grapefruit??
-```
-#############################################
-# Custom command for samples/grapeFruit/grapeFruit/grapeFruit_module.h
-
-build samples/grapeFruit/grapeFruit/grapeFruit_module.h samples/grapeFruit/grapeFruit/grapeFruit.o samples/grapeFruit/grapeFruit/grapeFruit.h samples/grapeFruit/grapeFruit/grapeFruit_llvm.h samples/grapeFruit/grapeFruit/grapeFruit_llvm.o | ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit_module.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit.o ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit_llvm.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit/grapeFruit_llvm.o: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile samples/grapeFruit/grapeFruit.mlirbc /home/hoppip/Quidditch/venv/bin/xdsl-opt /home/hoppip/Quidditch/toolchain/bin/pulp-as || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/grapeFruit && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=quidditch --iree-quidditch-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit.o --iree-quidditch-xdsl-opt-path=/home/hoppip/Quidditch/venv/bin/xdsl-opt --iree-quidditch-toolchain-root=/home/hoppip/Quidditch/toolchain --iree-hal-target-backends=llvm-cpu --iree-llvmcpu-debug-symbols=true --iree-llvmcpu-target-triple=riscv32-unknown-elf --iree-llvmcpu-target-cpu=generic-rv32 --iree-llvmcpu-target-cpu-features=+m,+f,+d,+zfh --iree-llvmcpu-target-abi=ilp32d --iree-llvmcpu-target-float-abi=hard --iree-llvmcpu-link-embedded=false --iree-llvmcpu-link-static --iree-llvmcpu-number-of-threads=8 --iree-llvmcpu-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit_llvm.o --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit.mlirbc -o /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit_module.h
-  DESC = Generating grapeFruit/grapeFruit_module.h, grapeFruit/grapeFruit.o, grapeFruit/grapeFruit.h, grapeFruit/grapeFruit_llvm.h, grapeFruit/grapeFruit_llvm.o
-  restat = 1
-
-
-#############################################
-# Custom command for samples/grapeFruit/grapeFruit.mlirbc
-
-build samples/grapeFruit/grapeFruit.mlirbc | ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit.mlirbc: CUSTOM_COMMAND /home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit.py || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/grapeFruit && /home/hoppip/Quidditch/venv/bin/python3.11 /home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit.py /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit.mlirbc --dtype=f64
-  DESC = Translating grapeFruit using iree-turbine
-  restat = 1
-
-
-#############################################
-# Custom command for samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h
-
-build samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.h samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o | ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.h ${cmake_ninja_workdir}samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o: CUSTOM_COMMAND /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile samples/grapeFruit/grapeFruit.mlirbc || iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_synchronization.objects iree-configuration/iree/runtime/src/iree/base/internal/iree_base_internal_time.objects iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/iree_base_base.objects iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/iree_vm_impl.objects iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  COMMAND = cd /home/hoppip/Quidditch/build/runtime/samples/grapeFruit && /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile --iree-vm-bytecode-module-strip-source-map=true --iree-vm-emit-polyglot-zip=false --iree-input-type=auto --iree-input-demote-f64-to-f32=0 --iree-hal-target-backends=llvm-cpu --iree-llvmcpu-debug-symbols=true --iree-llvmcpu-target-triple=riscv32-unknown-elf --iree-llvmcpu-target-cpu=generic-rv32 --iree-llvmcpu-target-cpu-features=+m,+f,+d,+zfh --iree-llvmcpu-target-abi=ilp32d --iree-llvmcpu-target-float-abi=hard --iree-llvmcpu-link-embedded=false --iree-llvmcpu-link-static --iree-llvmcpu-number-of-threads=8 --iree-llvmcpu-static-library-output-path=/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o --output-format=vm-c --iree-vm-target-index-bits=32 /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit.mlirbc -o /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h
-  DESC = Generating grapeFruit_llvm/grapeFruit_llvm_module.h, grapeFruit_llvm/grapeFruit_llvm.h, grapeFruit_llvm/grapeFruit_llvm.o
-  restat = 1
-```
-
-Try to take nsnet test case and turn it into matmul...
-
-```
-# =============================================================================
-# Object build statements for STATIC_LIBRARY target grapeFruit
-
-
-#############################################
-# Order-only phony target for grapeFruit
-
-build cmake_object_order_depends_target_grapeFruit: phony || cmake_object_order_depends_target_iree_base_base cmake_object_order_depends_target_iree_base_internal_synchronization cmake_object_order_depends_target_iree_base_internal_time cmake_object_order_depends_target_iree_vm_impl samples/grapeFruit/grapeFruit.mlirbc samples/grapeFruit/grapeFruit/grapeFruit.h samples/grapeFruit/grapeFruit/grapeFruit.o samples/grapeFruit/grapeFruit/grapeFruit_llvm.h samples/grapeFruit/grapeFruit/grapeFruit_llvm.o samples/grapeFruit/grapeFruit/grapeFruit_module.h
-
-build samples/grapeFruit/CMakeFiles/grapeFruit.dir/grapeFruit/grapeFruit_module.c.obj: C_COMPILER__grapeFruit_unscanned_Release /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit/grapeFruit_module.c || cmake_object_order_depends_target_grapeFruit
-  DEFINES = -DIREE_PLATFORM_GENERIC -DIREE_USER_CONFIG_H=\"/home/hoppip/Quidditch/runtime/iree-configuration/config.h\" -D_ISOC11_SOURCE
-  DEP_FILE = samples/grapeFruit/CMakeFiles/grapeFruit.dir/grapeFruit/grapeFruit_module.c.obj.d
-  FLAGS = "-g" -O3 -DNDEBUG -std=gnu11 -flto=thin
-  INCLUDES = -I/home/hoppip/Quidditch/iree -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree -I/home/hoppip/Quidditch/iree/runtime/src -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree/runtime/src
-  LAUNCHER = ccache 
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/grapeFruit.dir
-  OBJECT_FILE_DIR = samples/grapeFruit/CMakeFiles/grapeFruit.dir/grapeFruit
-
-
-# =============================================================================
-# Link build statements for STATIC_LIBRARY target grapeFruit
-
-
-#############################################
-# Link the static library samples/grapeFruit/libgrapeFruit.a
-
-build samples/grapeFruit/libgrapeFruit.a: C_STATIC_LIBRARY_LINKER__grapeFruit_Release samples/grapeFruit/grapeFruit/grapeFruit.o samples/grapeFruit/grapeFruit/grapeFruit_llvm.o samples/grapeFruit/CMakeFiles/grapeFruit.dir/grapeFruit/grapeFruit_module.c.obj || iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  LANGUAGE_COMPILE_FLAGS = "-g" -O3 -DNDEBUG -flto=thin
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/grapeFruit.dir
-  POST_BUILD = :
-  PRE_LINK = :
-  TARGET_FILE = samples/grapeFruit/libgrapeFruit.a
-  TARGET_PDB = grapeFruit.a.dbg
-
-# =============================================================================
-# Object build statements for STATIC_LIBRARY target grapeFruit_llvm
-
-
-#############################################
-# Order-only phony target for grapeFruit_llvm
-
-build cmake_object_order_depends_target_grapeFruit_llvm: phony || cmake_object_order_depends_target_iree_base_base cmake_object_order_depends_target_iree_base_internal_synchronization cmake_object_order_depends_target_iree_base_internal_time cmake_object_order_depends_target_iree_vm_impl samples/grapeFruit/grapeFruit.mlirbc samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.h samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.h
-
-build samples/grapeFruit/CMakeFiles/grapeFruit_llvm.dir/grapeFruit_llvm/grapeFruit_llvm_module.c.obj: C_COMPILER__grapeFruit_llvm_unscanned_Release /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm_module.c || cmake_object_order_depends_target_grapeFruit_llvm
-  DEFINES = -DIREE_PLATFORM_GENERIC -DIREE_USER_CONFIG_H=\"/home/hoppip/Quidditch/runtime/iree-configuration/config.h\" -D_ISOC11_SOURCE
-  DEP_FILE = samples/grapeFruit/CMakeFiles/grapeFruit_llvm.dir/grapeFruit_llvm/grapeFruit_llvm_module.c.obj.d
-  FLAGS = "-g" -O3 -DNDEBUG -std=gnu11 -flto=thin
-  INCLUDES = -I/home/hoppip/Quidditch/iree -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree -I/home/hoppip/Quidditch/iree/runtime/src -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree/runtime/src
-  LAUNCHER = ccache 
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/grapeFruit_llvm.dir
-  OBJECT_FILE_DIR = samples/grapeFruit/CMakeFiles/grapeFruit_llvm.dir/grapeFruit_llvm
-
-
-# =============================================================================
-# Link build statements for STATIC_LIBRARY target grapeFruit_llvm
-
-
-#############################################
-# Link the static library samples/grapeFruit/libgrapeFruit_llvm.a
-
-build samples/grapeFruit/libgrapeFruit_llvm.a: C_STATIC_LIBRARY_LINKER__grapeFruit_llvm_Release samples/grapeFruit/grapeFruit_llvm/grapeFruit_llvm.o samples/grapeFruit/CMakeFiles/grapeFruit_llvm.dir/grapeFruit_llvm/grapeFruit_llvm_module.c.obj || iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a
-  LANGUAGE_COMPILE_FLAGS = "-g" -O3 -DNDEBUG -flto=thin
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/grapeFruit_llvm.dir
-  POST_BUILD = :
-  PRE_LINK = :
-  TARGET_FILE = samples/grapeFruit/libgrapeFruit_llvm.a
-  TARGET_PDB = grapeFruit_llvm.a.dbg
-
-# =============================================================================
-# Object build statements for STATIC_LIBRARY target grapeFruit_util
-
-
-#############################################
-# Order-only phony target for grapeFruit_util
-
-build cmake_object_order_depends_target_grapeFruit_util: phony || cmake_object_order_depends_target_Quidditch_command_buffer_command_buffer cmake_object_order_depends_target_Quidditch_device_device cmake_object_order_depends_target_Quidditch_dispatch_dispatch cmake_object_order_depends_target_Quidditch_executable_executable cmake_object_order_depends_target_Quidditch_loader_loader cmake_object_order_depends_target_iree_base_base cmake_object_order_depends_target_iree_base_internal_arena cmake_object_order_depends_target_iree_base_internal_atomic_slist cmake_object_order_depends_target_iree_base_internal_cpu cmake_object_order_depends_target_iree_base_internal_fpu_state cmake_object_order_depends_target_iree_base_internal_path cmake_object_order_depends_target_iree_base_internal_synchronization cmake_object_order_depends_target_iree_base_internal_time cmake_object_order_depends_target_iree_hal_hal cmake_object_order_depends_target_iree_hal_local_executable_environment cmake_object_order_depends_target_iree_hal_local_executable_library_util cmake_object_order_depends_target_iree_hal_local_executable_loader cmake_object_order_depends_target_iree_hal_local_local cmake_object_order_depends_target_iree_hal_utils_deferred_command_buffer cmake_object_order_depends_target_iree_hal_utils_file_transfer cmake_object_order_depends_target_iree_hal_utils_memory_file cmake_object_order_depends_target_iree_hal_utils_resource_set cmake_object_order_depends_target_iree_hal_utils_semaphore_base cmake_object_order_depends_target_iree_io_file_handle cmake_object_order_depends_target_iree_io_memory_stream cmake_object_order_depends_target_iree_io_stream cmake_object_order_depends_target_iree_modules_hal_hal cmake_object_order_depends_target_iree_modules_hal_types cmake_object_order_depends_target_iree_modules_hal_utils_buffer_diagnostics cmake_object_order_depends_target_iree_vm_impl cmake_object_order_depends_target_samples_util
-
-build samples/grapeFruit/CMakeFiles/grapeFruit_util.dir/grapeFruit_util.c.obj: C_COMPILER__grapeFruit_util_unscanned_Release /home/hoppip/Quidditch/runtime/samples/grapeFruit/grapeFruit_util.c || cmake_object_order_depends_target_grapeFruit_util
-  DEFINES = -DIREE_PLATFORM_GENERIC -DIREE_USER_CONFIG_H=\"/home/hoppip/Quidditch/runtime/iree-configuration/config.h\" -D_ISOC11_SOURCE
-  DEP_FILE = samples/grapeFruit/CMakeFiles/grapeFruit_util.dir/grapeFruit_util.c.obj.d
-  FLAGS = "-g" -O3 -DNDEBUG -std=gnu11 -flto=thin -Wno-undefined-inline
-  INCLUDES = -I/home/hoppip/Quidditch/runtime/samples/util/.. -I/home/hoppip/Quidditch/iree -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree -I/home/hoppip/Quidditch/iree/runtime/src -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree/runtime/src -I/home/hoppip/Quidditch/runtime/runtime/src -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree/runtime/plugins/Quidditch/src -isystem /home/hoppip/Quidditch/runtime/../snitch_cluster/sw/snRuntime/api -isystem /home/hoppip/Quidditch/runtime/../snitch_cluster/sw/deps/riscv-opcodes -isystem /home/hoppip/Quidditch/runtime/snitch_cluster/api
-  LAUNCHER = ccache 
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/grapeFruit_util.dir
-  OBJECT_FILE_DIR = samples/grapeFruit/CMakeFiles/grapeFruit_util.dir
-
-
-# =============================================================================
-# Link build statements for STATIC_LIBRARY target grapeFruit_util
-
-
-#############################################
-# Link the static library samples/grapeFruit/libgrapeFruit_util.a
-
-build samples/grapeFruit/libgrapeFruit_util.a: C_STATIC_LIBRARY_LINKER__grapeFruit_util_Release samples/grapeFruit/CMakeFiles/grapeFruit_util.dir/grapeFruit_util.c.obj || iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a samples/util/libsamples_util.a
-  LANGUAGE_COMPILE_FLAGS = "-g" -O3 -DNDEBUG -flto=thin
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/grapeFruit_util.dir
-  POST_BUILD = :
-  PRE_LINK = :
-  TARGET_FILE = samples/grapeFruit/libgrapeFruit_util.a
-  TARGET_PDB = grapeFruit_util.a.dbg
-
-# =============================================================================
-# Object build statements for EXECUTABLE target GrapeFruit
-
-
-#############################################
-# Order-only phony target for GrapeFruit
-
-build cmake_object_order_depends_target_GrapeFruit: phony || cmake_object_order_depends_target_Quidditch_command_buffer_command_buffer cmake_object_order_depends_target_Quidditch_device_device cmake_object_order_depends_target_Quidditch_dispatch_dispatch cmake_object_order_depends_target_Quidditch_executable_executable cmake_object_order_depends_target_Quidditch_loader_loader cmake_object_order_depends_target_grapeFruit cmake_object_order_depends_target_grapeFruit_util cmake_object_order_depends_target_iree_base_base cmake_object_order_depends_target_iree_base_internal_arena cmake_object_order_depends_target_iree_base_internal_atomic_slist cmake_object_order_depends_target_iree_base_internal_cpu cmake_object_order_depends_target_iree_base_internal_fpu_state cmake_object_order_depends_target_iree_base_internal_path cmake_object_order_depends_target_iree_base_internal_synchronization cmake_object_order_depends_target_iree_base_internal_time cmake_object_order_depends_target_iree_hal_hal cmake_object_order_depends_target_iree_hal_local_executable_environment cmake_object_order_depends_target_iree_hal_local_executable_library_util cmake_object_order_depends_target_iree_hal_local_executable_loader cmake_object_order_depends_target_iree_hal_local_local cmake_object_order_depends_target_iree_hal_utils_deferred_command_buffer cmake_object_order_depends_target_iree_hal_utils_file_transfer cmake_object_order_depends_target_iree_hal_utils_memory_file cmake_object_order_depends_target_iree_hal_utils_resource_set cmake_object_order_depends_target_iree_hal_utils_semaphore_base cmake_object_order_depends_target_iree_io_file_handle cmake_object_order_depends_target_iree_io_memory_stream cmake_object_order_depends_target_iree_io_stream cmake_object_order_depends_target_iree_modules_hal_hal cmake_object_order_depends_target_iree_modules_hal_types cmake_object_order_depends_target_iree_modules_hal_utils_buffer_diagnostics cmake_object_order_depends_target_iree_vm_impl cmake_object_order_depends_target_samples_util cmake_object_order_depends_target_snRuntime
-
-build samples/grapeFruit/CMakeFiles/GrapeFruit.dir/GrapeFruit.c.obj: C_COMPILER__GrapeFruit_unscanned_Release /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/GrapeFruit.c || cmake_object_order_depends_target_GrapeFruit
-  DEFINES = -DIREE_PLATFORM_GENERIC -DIREE_USER_CONFIG_H=\"/home/hoppip/Quidditch/runtime/iree-configuration/config.h\" -D_ISOC11_SOURCE
-  DEP_FILE = samples/grapeFruit/CMakeFiles/GrapeFruit.dir/GrapeFruit.c.obj.d
-  FLAGS = "-g" -O3 -DNDEBUG -std=gnu11 -flto=thin -Wno-undefined-inline
-  INCLUDES = -I/home/hoppip/Quidditch/runtime/samples/grapeFruit -I/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit -I/home/hoppip/Quidditch/iree -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree -I/home/hoppip/Quidditch/iree/runtime/src -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree/runtime/src -isystem /home/hoppip/Quidditch/runtime/../snitch_cluster/sw/snRuntime/api -isystem /home/hoppip/Quidditch/runtime/../snitch_cluster/sw/deps/riscv-opcodes -isystem /home/hoppip/Quidditch/runtime/snitch_cluster/api
-  LAUNCHER = ccache 
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/GrapeFruit.dir
-  OBJECT_FILE_DIR = samples/grapeFruit/CMakeFiles/GrapeFruit.dir
-
-
-# =============================================================================
-# Link build statements for EXECUTABLE target GrapeFruit
-
-
-#############################################
-# Link the executable samples/grapeFruit/GrapeFruit
-
-build samples/grapeFruit/GrapeFruit: C_EXECUTABLE_LINKER__GrapeFruit_Release samples/grapeFruit/CMakeFiles/GrapeFruit.dir/GrapeFruit.c.obj | samples/grapeFruit/libgrapeFruit_util.a samples/grapeFruit/libgrapeFruit.a snitch_cluster/libsnRuntime.a samples/util/libsamples_util.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a || iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a samples/grapeFruit/libgrapeFruit.a samples/grapeFruit/libgrapeFruit_util.a samples/util/libsamples_util.a snitch_cluster/libsnRuntime.a
-  FLAGS = "-g" -O3 -DNDEBUG -flto=thin
-  LINK_FLAGS = -lm -Tbase.ld
-  LINK_LIBRARIES = samples/grapeFruit/libgrapeFruit_util.a  samples/grapeFruit/libgrapeFruit.a  snitch_cluster/libsnRuntime.a  samples/util/libsamples_util.a  iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a  iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a  iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a  iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a  iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a  iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a  iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a  iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a  iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a
-  LINK_PATH = -L/home/hoppip/Quidditch/runtime/../snitch_cluster/sw/snRuntime   -L/home/hoppip/Quidditch/runtime/snitch_cluster/rtl
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/GrapeFruit.dir
-  POST_BUILD = :
-  PRE_LINK = :
-  TARGET_FILE = samples/grapeFruit/GrapeFruit
-  TARGET_PDB = GrapeFruit.dbg
-
-# =============================================================================
-# Object build statements for EXECUTABLE target GrapeFruitLLVM
-
-
-#############################################
-# Order-only phony target for GrapeFruitLLVM
-
-build cmake_object_order_depends_target_GrapeFruitLLVM: phony || cmake_object_order_depends_target_Quidditch_command_buffer_command_buffer cmake_object_order_depends_target_Quidditch_device_device cmake_object_order_depends_target_Quidditch_dispatch_dispatch cmake_object_order_depends_target_Quidditch_executable_executable cmake_object_order_depends_target_Quidditch_loader_loader cmake_object_order_depends_target_grapeFruit_llvm cmake_object_order_depends_target_grapeFruit_util cmake_object_order_depends_target_iree_base_base cmake_object_order_depends_target_iree_base_internal_arena cmake_object_order_depends_target_iree_base_internal_atomic_slist cmake_object_order_depends_target_iree_base_internal_cpu cmake_object_order_depends_target_iree_base_internal_fpu_state cmake_object_order_depends_target_iree_base_internal_path cmake_object_order_depends_target_iree_base_internal_synchronization cmake_object_order_depends_target_iree_base_internal_time cmake_object_order_depends_target_iree_hal_hal cmake_object_order_depends_target_iree_hal_local_executable_environment cmake_object_order_depends_target_iree_hal_local_executable_library_util cmake_object_order_depends_target_iree_hal_local_executable_loader cmake_object_order_depends_target_iree_hal_local_local cmake_object_order_depends_target_iree_hal_utils_deferred_command_buffer cmake_object_order_depends_target_iree_hal_utils_file_transfer cmake_object_order_depends_target_iree_hal_utils_memory_file cmake_object_order_depends_target_iree_hal_utils_resource_set cmake_object_order_depends_target_iree_hal_utils_semaphore_base cmake_object_order_depends_target_iree_io_file_handle cmake_object_order_depends_target_iree_io_memory_stream cmake_object_order_depends_target_iree_io_stream cmake_object_order_depends_target_iree_modules_hal_hal cmake_object_order_depends_target_iree_modules_hal_types cmake_object_order_depends_target_iree_modules_hal_utils_buffer_diagnostics cmake_object_order_depends_target_iree_vm_impl cmake_object_order_depends_target_samples_util cmake_object_order_depends_target_snRuntime
-
-build samples/grapeFruit/CMakeFiles/GrapeFruitLLVM.dir/GrapeFruitLLVM.c.obj: C_COMPILER__GrapeFruitLLVM_unscanned_Release /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/GrapeFruitLLVM.c || cmake_object_order_depends_target_GrapeFruitLLVM
-  DEFINES = -DIREE_PLATFORM_GENERIC -DIREE_USER_CONFIG_H=\"/home/hoppip/Quidditch/runtime/iree-configuration/config.h\" -D_ISOC11_SOURCE
-  DEP_FILE = samples/grapeFruit/CMakeFiles/GrapeFruitLLVM.dir/GrapeFruitLLVM.c.obj.d
-  FLAGS = "-g" -O3 -DNDEBUG -std=gnu11 -flto=thin -Wno-undefined-inline
-  INCLUDES = -I/home/hoppip/Quidditch/runtime/samples/grapeFruit -I/home/hoppip/Quidditch/build/runtime/samples/grapeFruit/grapeFruit_llvm -I/home/hoppip/Quidditch/iree -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree -I/home/hoppip/Quidditch/iree/runtime/src -I/home/hoppip/Quidditch/build/runtime/iree-configuration/iree/runtime/src -isystem /home/hoppip/Quidditch/runtime/../snitch_cluster/sw/snRuntime/api -isystem /home/hoppip/Quidditch/runtime/../snitch_cluster/sw/deps/riscv-opcodes -isystem /home/hoppip/Quidditch/runtime/snitch_cluster/api
-  LAUNCHER = ccache 
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/GrapeFruitLLVM.dir
-  OBJECT_FILE_DIR = samples/grapeFruit/CMakeFiles/GrapeFruitLLVM.dir
-
-
-# =============================================================================
-# Link build statements for EXECUTABLE target GrapeFruitLLVM
-
-
-#############################################
-# Link the executable samples/grapeFruit/GrapeFruitLLVM
-
-build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Release samples/grapeFruit/CMakeFiles/GrapeFruitLLVM.dir/GrapeFruitLLVM.c.obj | samples/grapeFruit/libgrapeFruit_util.a samples/grapeFruit/libgrapeFruit_llvm.a snitch_cluster/libsnRuntime.a samples/util/libsamples_util.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a || iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a samples/grapeFruit/libgrapeFruit_llvm.a samples/grapeFruit/libgrapeFruit_util.a samples/util/libsamples_util.a snitch_cluster/libsnRuntime.a
-  FLAGS = "-g" -O3 -DNDEBUG -flto=thin
-  LINK_FLAGS = -lm -Tbase.ld
-  LINK_LIBRARIES = samples/grapeFruit/libgrapeFruit_util.a  samples/grapeFruit/libgrapeFruit_llvm.a  snitch_cluster/libsnRuntime.a  samples/util/libsamples_util.a  iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_hal.a  iree-configuration/iree/runtime/src/iree/modules/hal/utils/libiree_modules_hal_utils_buffer_diagnostics.a  iree-configuration/iree/runtime/src/iree/modules/hal/libiree_modules_hal_types.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_local.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/device/libQuidditch_device_device.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_library_util.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_loader.a  iree-configuration/iree/runtime/src/iree/hal/local/libiree_hal_local_executable_environment.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_deferred_command_buffer.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_resource_set.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_arena.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_atomic_slist.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_file_transfer.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_memory_file.a  iree-configuration/iree/runtime/src/iree/hal/utils/libiree_hal_utils_semaphore_base.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/command_buffer/libQuidditch_command_buffer_command_buffer.a  iree-configuration/iree/runtime/src/iree/hal/libiree_hal_hal.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_path.a  iree-configuration/iree/runtime/src/iree/io/libiree_io_file_handle.a  iree-configuration/iree/runtime/src/iree/io/libiree_io_memory_stream.a  iree-configuration/iree/runtime/src/iree/io/libiree_io_stream.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_cpu.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_fpu_state.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/loader/libQuidditch_loader_loader.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/executable/libQuidditch_executable_executable.a  iree-configuration/iree/runtime/plugins/Quidditch/src/Quidditch/dispatch/libQuidditch_dispatch_dispatch.a  iree-configuration/iree/runtime/src/iree/vm/libiree_vm_impl.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_synchronization.a  iree-configuration/iree/runtime/src/iree/base/libiree_base_base.a  iree-configuration/iree/runtime/src/iree/base/internal/libiree_base_internal_time.a
-  LINK_PATH = -L/home/hoppip/Quidditch/runtime/../snitch_cluster/sw/snRuntime   -L/home/hoppip/Quidditch/runtime/snitch_cluster/rtl
-  OBJECT_DIR = samples/grapeFruit/CMakeFiles/GrapeFruitLLVM.dir
-  POST_BUILD = :
-  PRE_LINK = :
-  TARGET_FILE = samples/grapeFruit/GrapeFruitLLVM
-  TARGET_PDB = GrapeFruitLLVM.dbg
-```
-
-
+- Work In Progress
+- [ConfigureUsingZigZag](../codegen/compiler/src/Quidditch/Target/ConfigureUsingZigzag.cpp) is planned to eventually
+  - annotate any linalg op with tiling information from ZigZag
+  - export linalg ops as ZigZag workloads (instead of annotating them) when requested
+- [ZigzagTiling](../codegen/compiler/src/Quidditch/Target/ZigzagTiling.cpp) is planned to eventually to perform the actual tiling requested by ZigZag (planned to replace [TensorTile](../codegen/compiler/src/Quidditch/Target/TensorTile.cpp))
 
 ## Troubleshooting 
 
@@ -480,11 +184,13 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    ```
 
    Invoke build tool:
+
    ```
    ninja -j 20
    ```
 
    error:
+
    ```
    -- Build files have been written to: /home/hoppip/Quidditch/build2/runtime
    [14/18] Performing build step for 'runtime'
@@ -510,6 +216,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    `pulp-as` was indeed inside the docker image!
 
    But notice I had older docker images as well:
+
    ```
    [hoppip@inf-205-141 temp]$ sudo docker image ls
    REPOSITORY                              TAG       IMAGE ID       CREATED         SIZE
@@ -543,6 +250,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    ```
 
    Solution: add `sudo`: 
+
    ```
    sudo docker run --rm ghcr.io/opencompl/quidditch/toolchain:main tar -cC /opt/quidditch-toolchain .\
     | tar -xC ./toolchain
@@ -574,6 +282,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    ```
 
    Solution:
+
    ```
    pip install setuptools
    ```
@@ -639,6 +348,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
      Reality check after installing: `whereis python3.11` also `clear;cat config.log | grep fatal | grep ssl`
 
    - Use python 3.11 when creating your virtual env:
+
      ```
      deactivate # if inside a venv!
      cd ..
@@ -685,11 +395,13 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
      ```
 
      Solution: Uninstall python3.11, install dependencies, reinstall python3.11
+
      ```
      sudo dnf remove python3.11
      ```
 
      Install Dependencies:
+
      ```
      sudo dnf install git pkg-config
      sudo dnf install dnf-plugins-core
@@ -697,6 +409,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
      ```
 
      Inside extracted python source folder,
+
      ```
      ./configure
      clear;cat config.log | grep fatal | grep ssl
@@ -721,6 +434,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    ```
 
    Error: 
+
    ```
    FAILED: iree-configuration/iree/compiler/plugins/Quidditch/src/Quidditch/Dialect/DMA/IR/CMakeFiles/Quidditch_Dialect_DMA_IR_DMADialect.objects.dir/DMAOps.cpp.o 
    /usr/lib64/ccache/c++  -I/home/hoppip/Quidditch/iree -I/home/hoppip/Quidditch/build/codegen/iree-configuration/iree -I/home/hoppip/Quidditch/iree/third_party/llvm-project/llvm/include -I/home/hoppip/Quidditch/build/codegen/iree-configuration/iree/llvm-project/include -I/home/hoppip/Quidditch/iree/third_party/llvm-project/mlir/include -I/home/hoppip/Quidditch/build/codegen/iree-configuration/iree/llvm-project/tools/mlir/include -I/home/hoppip/Quidditch/iree/third_party/llvm-project/lld/include -I/home/hoppip/Quidditch/build/codegen/iree-configuration/iree/llvm-project/tools/lld/include -I/home/hoppip/Quidditch/codegen/compiler/src -I/home/hoppip/Quidditch/build/codegen/iree-configuration/iree/compiler/plugins/Quidditch/src -O3 -DNDEBUG -std=gnu++17 -fPIC -fvisibility=hidden -fno-rtti -fno-exceptions -Wall -Wno-error=deprecated-declarations -Wno-address -Wno-address-of-packed-member -Wno-comment -Wno-format-zero-length -Wno-uninitialized -Wno-overloaded-virtual -Wno-invalid-offsetof -Wno-sign-compare -Wno-unused-function -Wno-unknown-pragmas -Wno-unused-but-set-variable -Wno-misleading-indentation -fmacro-prefix-map=/home/hoppip/Quidditch/iree=iree -MD -MT iree-configuration/iree/compiler/plugins/Quidditch/src/Quidditch/Dialect/DMA/IR/CMakeFiles/Quidditch_Dialect_DMA_IR_DMADialect.objects.dir/DMAOps.cpp.o -MF iree-configuration/iree/compiler/plugins/Quidditch/src/Quidditch/Dialect/DMA/IR/CMakeFiles/Quidditch_Dialect_DMA_IR_DMADialect.objects.dir/DMAOps.cpp.o.d -o iree-configuration/iree/compiler/plugins/Quidditch/src/Quidditch/Dialect/DMA/IR/CMakeFiles/Quidditch_Dialect_DMA_IR_DMADialect.objects.dir/DMAOps.cpp.o -c /home/hoppip/Quidditch/codegen/compiler/src/Quidditch/Dialect/DMA/IR/DMAOps.cpp
@@ -734,6 +448,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    ```
 
    Solution: Re-congifure cmake (with clang flags and ccache) and then rebuild:
+
    ```
    cmake .. -GNinja \
      -DCMAKE_C_COMPILER=clang \
@@ -748,7 +463,7 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
    ```
 
 9. Build Error:
-   
+
    ```
    WARNING: Non-homogeneous multireg PERF_COUNTER_ENABLE skip multireg specific data generation.
    [133/140] Generating nsnet2/nsnet2_module.h, nsnet2/nsnet2...snet2/nsnet2.h, nsnet2/nsnet2_llvm.h, nsnet2/nsnet2_llvm.o
@@ -968,13 +683,15 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
 
    xDSL indeed does not support custom MLIR syntax, so likely your front end tools generated a lowering of nsnet into linalg that contained custom syntax. Why did your front end tools do that? Are they the wrong version?
    Solution:
-   
+
    - Reinstall `python3.11`, this time using a package manager!
+
      ```
      sudo dnf install python3.11
      ```
-   
+
    - Remake your virtual environment:
+
      ```
      deactivate
      cd ..
@@ -984,7 +701,6 @@ build samples/grapeFruit/GrapeFruitLLVM: C_EXECUTABLE_LINKER__GrapeFruitLLVM_Rel
      source ./venv/bin/activate
      pip install setuptools
      ```
-   
+
    - Repeat the cmake and build steps to try again!
-   
 

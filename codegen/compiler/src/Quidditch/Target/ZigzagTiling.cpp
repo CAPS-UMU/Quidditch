@@ -31,6 +31,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "ZigzagUtils.h"
 
 namespace quidditch {
 #define GEN_PASS_DEF_ZIGZAGTILING
@@ -47,26 +48,7 @@ namespace {
 class ZigzagTiling : public quidditch::impl::ZigzagTilingBase<ZigzagTiling> {
 public:
   using Base::Base;
-  struct TilingScheme {
-    bool valid = false;
-    uint64_t totalLoopCount = 0;
-    std::vector<std::vector<int>> bounds;
-    std::vector<std::vector<int>> order;
-    std::vector<std::vector<int>> finalIndices;
-    TilingScheme() = default;
-    void initialize(std::string filename);
-    std::string str();
-    friend std::stringstream &operator<<(std::stringstream &ss,
-                                         const ZigzagTiling::TilingScheme &ts);
-
-  private:
-    int findSubloop(size_t i, size_t j);
-    void setTotalLoopCount();
-    void buildFinalIndices();
-    void parseTilingScheme(StringRef fileContent);
-    void parseListOfListOfInts(llvm::json::Object *obj, std::string listName,
-                               std::vector<std::vector<int>> &out);
-  } ts;
+  struct TilingScheme ts;
 
 private:
   SmallVector<OpFoldResult>
@@ -419,156 +401,3 @@ ZigzagTiling::ZigZagTileSizeComputation(OpBuilder &builder,
   }
   return result;
 }
-
-// Tiling Scheme Functions defined below
-
-void ZigzagTiling::TilingScheme::setTotalLoopCount() {
-  unsigned total = 0;
-  for (const auto &bound : bounds) {
-    total += (bound.size() +
-              1); // for each loop getting tiled, count the extra affine loop
-                  // needed to calculate the first level indexing inside a tile
-  }
-  LLVM_DEBUG(
-      llvm::dbgs() << "[" DEBUG_TYPE
-                      "] total number of loops in tiled loop nest will be "
-                   << total << " \n");
-  totalLoopCount = total;
-}
-
-void ZigzagTiling::TilingScheme::buildFinalIndices() {
-  // std::vector<std::vector<int>> bounds;
-  // finalIndices
-  for (size_t i = 0; i < bounds.size(); i++) {
-    finalIndices.push_back(std::vector<int>());
-    for (size_t j = 0; j < bounds[i].size(); j++) {
-      size_t finalIndex = totalLoopCount - findSubloop(i, j) - 1;
-      finalIndices[i].push_back(finalIndex);
-    }
-  }
-}
-
-int ZigzagTiling::TilingScheme::findSubloop(size_t i, size_t j) {
-  for (size_t k = 0; k < order.size(); k++) {
-    if (((size_t)order[k][0] == i) && ((size_t)order[k][1] == j)) {
-      return k;
-    }
-  }
-  LLVM_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE
-                             "] Error: Could not find subloop in tiling scheme "
-                             "order. Returning negative index... \n");
-  return -1;
-}
-
-void ZigzagTiling::TilingScheme::initialize(std::string filename) {
-  // try to read file
-  std::ifstream ifs(filename);
-  assert(ifs.is_open() && "Tiling Scheme File exists and can be opened.");
-  std::stringstream ss;
-  ss << ifs.rdbuf();
-  assert(ss.str().length() != 0 &&
-         "Tiling Scheme file cannot have content length of 0");
-  //  try to parse file contents
-  parseTilingScheme(StringRef(ss.str()));
-  setTotalLoopCount();
-  buildFinalIndices();
-  valid = true;
-}
-
-std::string ZigzagTiling::TilingScheme::str() {
-  std::stringstream ts_ss;
-  ts_ss << *this;
-  return ts_ss.str();
-}
-
-// helpers for processing tiling scheme input
-void ZigzagTiling::TilingScheme::parseListOfListOfInts(
-    llvm::json::Object *obj, std::string listName,
-    std::vector<std::vector<int>> &out) {
-  llvm::json::Value *bnds = obj->get(StringRef(listName));
-  if (!bnds) { // getAsArray returns a (const json::Array *)
-    llvm::errs() << "Error: field labeled '" << listName
-                 << "' does not exist \n ";
-    exit(1);
-  }
-
-  if (!bnds->getAsArray()) { // getAsArray returns a (const json::Array *)
-    llvm::errs() << "Error: field labeled '" << listName
-                 << "' is not a JSON array \n ";
-    exit(1);
-  }
-  llvm::json::Path::Root Root("Try-to-parse-integer");
-  for (const auto &Item :
-       *(bnds->getAsArray())) { // loop over a json::Array type
-    if (!Item.getAsArray()) {
-      llvm::errs() << "Error: elt of '" << listName
-                   << "' is not also a JSON array \n ";
-      exit(1);
-    }
-    std::vector<int> sublist;
-    int bound;
-    for (const auto &elt :
-         *(Item.getAsArray())) { // loop over a json::Array type
-      if (!fromJSON(elt, bound, Root)) {
-        llvm::errs() << llvm::toString(Root.getError()) << "\n";
-        Root.printErrorContext(elt, llvm::errs());
-        exit(1);
-      }
-      sublist.push_back(bound);
-    }
-    out.push_back(sublist);
-  }
-}
-
-void ZigzagTiling::TilingScheme::parseTilingScheme(StringRef fileContent) {
-  llvm::Expected<llvm::json::Value> maybeParsed =
-      llvm::json::parse(fileContent);
-  if (!maybeParsed) {
-    llvm::errs() << "Error when parsing JSON file contents: "
-                 << llvm::toString(maybeParsed.takeError());
-    exit(1);
-  }
-  // try to get the top level json object
-  if (!maybeParsed->getAsObject()) {
-    llvm::errs() << "Error: top-level value is not a JSON object: " << '\n';
-    exit(1);
-  }
-  llvm::json::Object *O = maybeParsed->getAsObject();
-  // try to read the two fields
-  parseListOfListOfInts(O, "bounds", bounds);
-  parseListOfListOfInts(O, "order", order);
-}
-
-namespace {
-std::stringstream &operator<<(std::stringstream &ss,
-                              const ZigzagTiling::TilingScheme &ts) {
-  ss << "tiling scheme: {\nbounds: [ ";
-  for (const auto &sublist : ts.bounds) {
-    ss << "[ ";
-    for (const auto &bound : sublist) {
-      ss << " " << bound << " ";
-    }
-    ss << "] ";
-  }
-  ss << "]\n";
-  ss << "finalIndices: [ ";
-  for (const auto &sublist : ts.finalIndices) {
-    ss << "[ ";
-    for (const auto &pos : sublist) {
-      ss << " " << pos << " ";
-    }
-    ss << "] ";
-  }
-  ss << "]\n}";
-  ss << "order: [ ";
-  for (const auto &sublist : ts.order) {
-    ss << "[ ";
-    for (const auto &pos : sublist) {
-      ss << " " << pos << " ";
-    }
-    ss << "] ";
-  }
-  ss << "]\n}";
-  return ss;
-}
-} // namespace

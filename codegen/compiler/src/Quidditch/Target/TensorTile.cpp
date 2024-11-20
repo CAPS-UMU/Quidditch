@@ -237,9 +237,9 @@ void TensorTile::runOnOperation() {
     return signalPassFailure();
 
   if(funcOp.getName() ==
-         "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"){
-          std::string level = (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" : "L1";
-          funcOp->emitWarning() << "SLICEDCUCUMBER tiling level "<< level<<" This is the rewritten kernel!!!!!\n";
+         "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64"){
+         std::string level = (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" : "L1";
+         funcOp->emitWarning() << "SLICEDCUCUMBER tiling level "<< level<<" This is the rewritten kernel!!!!!\n";
 
   }
    

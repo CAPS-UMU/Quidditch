@@ -20,6 +20,7 @@ iree_cc_library(
         HDRS
         "Passes.h"
         "Passes.h.inc"
+        "ZigzagUtils.h"
         SRCS
         "ConvertToLLVM.cpp"
         "ConfigureForSnitch.cpp"
@@ -31,6 +32,7 @@ iree_cc_library(
         "RemoveTrivialLoops.cpp"
         "TensorTile.cpp"
         "ZigzagTiling.cpp"
+        "ZigzagUtils.cpp"
         DEPS
         ::PassesIncGen
         Quidditch::Conversion::ConvertSnitchToLLVM

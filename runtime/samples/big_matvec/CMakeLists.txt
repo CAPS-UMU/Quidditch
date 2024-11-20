@@ -1,4 +1,6 @@
 quidditch_module(SRC big_matvec.mlir ASSERT_XDSL)
+# quidditch_module(SRC big_matvec.mlir LLVM)
+
 
 add_executable(big_matvec_sample main.c)
 target_link_libraries(
@@ -9,4 +11,3 @@ target_link_libraries(
     snRuntime
     Quidditch::dispatch::dispatch
 )
-

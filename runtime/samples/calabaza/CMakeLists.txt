@@ -1,4 +1,4 @@
-quidditch_module(SRC pumpkin.mlir ASSERT_XDSL FLAGS --iree-quidditch-zigzag-tiling-scheme=hoodle.json --iree-quidditch-output-tiled=true)
+quidditch_module(SRC pumpkin.mlir ASSERT_XDSL FLAGS --iree-quidditch-zigzag-tiling-scheme=calabaza-hoodle.json)
 
 add_executable(calabaza main.c)
 target_link_libraries(
