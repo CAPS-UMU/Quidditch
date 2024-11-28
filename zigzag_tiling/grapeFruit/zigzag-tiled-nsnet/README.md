@@ -2,7 +2,17 @@
 
 [back to landing page](../../README.md)
 
-We try to tile all the nsnet kernels supported by xDSL, but only manage to tile one kernel (for now)
+We try to tile all the nsnet kernels supported by xDSL, ~~but only manage to tile one kernel (for now)~~ but one tiling one of the kernels causes errors:
+
+| Kernel Name                                             | Successfully Tiled with ZigZag-y plan?                       |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| main$async_dispatch_9_matmul_transpose_b_1x161x600_f64  | yes                                                          |
+| main$async_dispatch_0_matmul_transpose_b_1x400x161_f64  | yes                                                          |
+| main$async_dispatch_7_matmul_transpose_b_1x600x400_f64  | [Error: applyPartialConversion failed / ConvertToLLVMPass Failed (quidditch-convert-to-llvm)](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_7_matmul_transpose_b_1x600x400_f64.md#Error) |
+| main$async_dispatch_8_matmul_transpose_b_1x600x600_f64  | yes                                                          |
+| main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64 | yes                                                          |
+
+What about the other kernels that are NOT supported by xDSL? Can I go ahead and tile these?
 
 ## regular vs ZigZag-y* tiled nsnet (single kernel)
 
@@ -39,7 +49,9 @@ Commands run to get cycle count:
   Run into padding error. (More details below)
   Also, ZigZag tiling plan never assigns the output operand to L1. What does that mean? Doesn't it have to be in L1 at some point? What would it mean for an operand to only be assigned at the register file level? When does the output get stored back?
 
-- ["main$async_dispatch_0_matmul_transpose_b_1x400x161_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_0_matmul_transpose_b_1x400x161_f64.md)
+  **Probably broken because reduction dimension must be a multiple of 8 and we have 7 here??**
+
+- ["main$async_dispatch_0_matmul_transpose_b_1x400x161_f64"](./debugging-dispatch0/README.md)
 
   ```
   l1Interchange = {0, 1, 2};
@@ -49,7 +61,9 @@ Commands run to get cycle count:
   dualBuffer = false;
   ```
 
-  Doesn't fit in L1 error. (More details below)
+  ~~Doesn't fit in L1 error. (More details below)~~
+
+  No errors :D
 
 - ["main$async_dispatch_7_matmul_transpose_b_1x600x400_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_7_matmul_transpose_b_1x600x400_f64.md)
 
@@ -57,10 +71,12 @@ Commands run to get cycle count:
   l1Tiles[0] = 0;
   l1Tiles[1] = 30;
   l1Tiles[2] = 40;
-  l1Interchange = {0, 1, 2}; 
+  l1Interchange = {0, 2, 1}; 
   ```
 
-  Failed to Convert to LLVM error :( (More details below)
+  applyPartialConversion failed / ConvertToLLVMPass Failed (quidditch-convert-to-llvm)
+
+  more error info [here](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_7_matmul_transpose_b_1x600x400_f64.md#Error)
 
 - ["main$async_dispatch_8_matmul_transpose_b_1x600x600_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_8_matmul_transpose_b_1x600x600_f64.md)
 
@@ -73,16 +89,18 @@ Commands run to get cycle count:
 
   No errors :D
 
-- ["main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_1_matmul_transpose_b_1x1200x400_f64_plan_comparison.md)
+- ["main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_1_matmul_transpose_b_1x1200x400_f64.md)
 
   ```
   l1Tiles[0] = 0;
   l1Tiles[1] = 240;
-  l1Tiles[2] = 40;
-  l1Interchange = {0, 1, 2}; 
+  l1Tiles[2] = 16;
+  l1Interchange = {0, 2, 1}; 
   ```
 
-​	Does not fit in L1 error. (More details below)
+No errors :D	
+
+~~Does not fit in L1 error. (More details below)~~
 
 ## Errors
 

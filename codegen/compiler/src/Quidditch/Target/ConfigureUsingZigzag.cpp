@@ -30,7 +30,7 @@ public:
     if(this->tilingSchemes.compare(
           "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-tiled-nsnet.json") == 0) {
             //this->ts.valid = true;
-          // this->ts.initialize(this->tilingSchemes, this->workloads);        
+          this->ts.initialize(this->tilingSchemes, this->workloads);        
 
     }
   }
@@ -101,27 +101,35 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         }
         if (funcOp.getName() ==
             "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
-          l1Tiles[1] = 40;
-          // TODO: Switch to 82 and true once correctness bugs are fixed.
-          l1Tiles[2] = 0;
-          dualBuffer = false;
-          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
-          // l1Interchange = {0, 1, 2};
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 0;
+          // l1Tiles[1] = 40;
+          // // TODO: Switch to 82 and true once correctness bugs are fixed.
           // l1Tiles[2] = 0;
           // dualBuffer = false;
+          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
+          l1Interchange = {0, 1, 2};
+          l1Tiles[0] = 0;
+          l1Tiles[1] = 0;
+          l1Tiles[2] = 0;
+          dualBuffer = false;
         }
         if (funcOp.getName() ==
             "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64") {
-          l1Tiles[0] = 0;
-          l1Tiles[1] = 40;
-          l1Tiles[2] = 100;
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 40;
+          // l1Tiles[2] = 100;
           // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
           // l1Tiles[0] = 0;
           // l1Tiles[1] = 30;
           // l1Tiles[2] = 40;
-          l1Interchange = {0, 1, 2}; 
+          // l1Interchange = {0, 1, 2}; 
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 300;
+          // l1Tiles[2] = 4;
+          // l1Interchange = {0, 2, 1}; 
+          l1Tiles[0] = 0;
+l1Tiles[1] = 30;
+l1Tiles[2] = 40;
+l1Interchange = {0, 2, 1}; 
         }
         if (funcOp.getName() ==
             "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
@@ -134,15 +142,19 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         if (funcOp.getName() == "main$async_dispatch_1_matmul_transpose_b_"
                                 "1x1200x400_f64") { // tiled by ZigZag
           // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
-          l1Tiles[0] = 0;
-          l1Tiles[1] = 40;
-          l1Tiles[2] = 100;
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 40;
+          // l1Tiles[2] = 100;
           // zigzag
           // l1Interchange = {0, 1, 2};
           // l1Tiles[0] = 0;
           // l1Tiles[1] = 240;
           // l1Tiles[2] = 40;
           // dualBuffer = false;
+          l1Tiles[0] = 0;
+          l1Tiles[1] = 240;
+          l1Tiles[2] = 16;
+          l1Interchange = {0, 2, 1}; 
         }
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
