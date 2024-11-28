@@ -2,11 +2,11 @@
 
 [back to landing page](../../README.md)
 
-We try to tile all the nsnet kernels supported by xDSL, ~~but only manage to tile one kernel (for now)~~ but one tiling one of the kernels causes errors:
+We try to tile all the nsnet kernels supported by xDSL, ~~but only manage to tile one kernel (for now)~~ but one tiling two of the kernels causes errors:
 
 | Kernel Name                                             | Successfully Tiled with ZigZag-y plan?                       |
 | ------------------------------------------------------- | ------------------------------------------------------------ |
-| main$async_dispatch_9_matmul_transpose_b_1x161x600_f64  | yes                                                          |
+| main$async_dispatch_9_matmul_transpose_b_1x161x600_f64  | padding error (but ZigZag recommends running on 7 compute cores, which Quidditch does not allow) |
 | main$async_dispatch_0_matmul_transpose_b_1x400x161_f64  | yes                                                          |
 | main$async_dispatch_7_matmul_transpose_b_1x600x400_f64  | [Error: applyPartialConversion failed / ConvertToLLVMPass Failed (quidditch-convert-to-llvm)](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_7_matmul_transpose_b_1x600x400_f64.md#Error) |
 | main$async_dispatch_8_matmul_transpose_b_1x600x600_f64  | yes                                                          |
