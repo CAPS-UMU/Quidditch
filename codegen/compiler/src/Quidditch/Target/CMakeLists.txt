@@ -25,6 +25,7 @@ iree_cc_library(
         "ConvertToLLVM.cpp"
         "ConfigureForSnitch.cpp"
         "ConfigureUsingZigzag.cpp"
+        "ConfigureTiles.cpp"
         "DisableQuidditchVariant.cpp"
         "LinkExecutables.cpp"
         "PadToTilingConfig.cpp"

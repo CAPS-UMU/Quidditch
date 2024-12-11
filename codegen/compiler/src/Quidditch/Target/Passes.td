@@ -39,6 +39,23 @@ def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::Functio
            "Name of a yaml file to which we export the zigzag workload representation of each linalg operation.">,
   ];
 }
+//IREE::HAL::ExecutableVariantOp
+// def ConfigureTiles : Pass<"quidditch-configure-tiles", "mlir::ModuleOp"> {
+def ConfigureTiles : Pass<"quidditch-configure-tiles", "mlir::ModuleOp"> {
+  let summary = "Annotate linalg operations with tile sizes";
+  let description = [{
+    Within each iree-defined kernel, annotate the root linalg operation with a tiling schemes (tile sizes + loop interchange).
+
+    Alternatively, if the export option is not empty, export all iree-defined kernels 
+    (that contain linalg operations) to a JSON file.
+  }];
+    let options = [
+    Option<"importTilingSchemes", "import-tiling-schemes", "std::string", /*default=*/"",
+           "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
+    Option<"exportUntiled", "export-untiled", "std::string", /*default=*/"",
+           "Name of a JSON file to which we export untiled linalg operations.">,
+  ];
+}
 
 def ZigzagTiling : InterfacePass<"zigzag-tile", "mlir::FunctionOpInterface"> {
   let summary = "Optimize linalg operations according to a ZigZag Tiling Scheme.";

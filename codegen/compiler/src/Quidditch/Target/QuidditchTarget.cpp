@@ -81,6 +81,8 @@ struct QuidditchTargetOptions {
   std::string xDSLOptPath;
   std::string toolChainRoot;
   bool assertCompiled = false;
+  std::string importTilingSchemes = ""; // added for Configure Tiles Pass
+  std::string exportUntiled = ""; // added for Configure Tiles Pass
   std::string zigzagWorkloads = ""; // added for Configure Using ZigZag Pass
   std::string zigzagTilingSchemes = ""; // added for Configure Using ZigZag Pass
   std::string zigzagTilingScheme = ""; // added for ZigZag Tiling Pass
@@ -111,6 +113,13 @@ struct QuidditchTargetOptions {
         "iree-quidditch-toolchain-root", toolChainRoot, llvm::cl::cat(category),
         llvm::cl::desc("Path to the root directory of the Quidditch toolchain "
                        "(containing the toolchain file)"));
+    // added for Configure Tiles Pass
+    binder.opt<std::string>(
+        "iree-quidditch-import-tiles", importTilingSchemes, llvm::cl::cat(category),
+        llvm::cl::desc("Path to a JSON file from which we import tiling schemes"));
+    binder.opt<std::string>(
+        "iree-quidditch-export-untiled", exportUntiled, llvm::cl::cat(category),
+        llvm::cl::desc("Path to a JSON file to which we export untiled linalg operations."));
     // added for Configure Using ZigZag Pass
     binder.opt<std::string>(
         "iree-quidditch-zigzag-workloads", zigzagWorkloads, llvm::cl::cat(category),
@@ -192,6 +201,11 @@ public:
     funcPassManager.addPass([&] {
           return quidditch::createConfigureUsingZigzag({targetOptions.zigzagTilingSchemes, targetOptions.zigzagWorkloads});
         });
+    // funcPassManager.addPass([&] {
+    //       return quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled});
+    //     });
+    modulePassManager.addPass(quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}));
+    modulePassManager.addPass(quidditch::createConfigureTiles({"yodelayheehoooo~~~!", targetOptions.exportUntiled}));
   }
 
   void buildTranslationPassPipeline(IREE::HAL::ExecutableTargetAttr targetAttr,

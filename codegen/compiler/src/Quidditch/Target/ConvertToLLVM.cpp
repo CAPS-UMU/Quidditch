@@ -1072,12 +1072,22 @@ void ConvertToLLVMPass::runOnOperation() {
                            math::MathDialect, tosa::TosaDialect,
                            Snitch::QuidditchSnitchDialect>();
 
+  // EMIT IR BEFORE PARTIAL CONVERSION
+    ss.str("");
+    // ss << "\nRADDISH (q-convert-to-llvm) BEFORE applyPartialConversion ...";
+    // getOperation()->emitWarning() << ss.str();
+    // ss.str("");
+
   if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
-    ss << "\nRADDISH (q-convert-to-llvm) applyPartialConversion failed :'(";
-    getOperation()->emitWarning() << ss.str();
+    // ss << "\nRADDISH (q-convert-to-llvm) applyPartialConversion failed :'(";
+    // getOperation()->emitWarning() << ss.str();
     signalPassFailure();
     return;
   }
+  // ss.str("");
+  // ss << "\nRADDISH (q-convert-to-llvm) AFTER successful applyPartialConversion ...";
+  // getOperation()->emitWarning() << ss.str();
+  // ss.str("");
 
   // Rewrite any extern calls emitted to dynamic library imports.
   {

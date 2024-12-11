@@ -9,6 +9,7 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "ZigzagUtils.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace quidditch {
 #define GEN_PASS_DEF_CONFIGUREUSINGZIGZAG
@@ -29,9 +30,13 @@ public:
     this->tester = "HONEYBEEE";
     if(this->tilingSchemes.compare(
           "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-tiled-nsnet.json") == 0) {
-            //this->ts.valid = true;
+            this->ts.valid = true;
           this->ts.initialize(this->tilingSchemes, this->workloads);        
 
+    }
+    else{
+      this->ts.valid=false;
+      this->ts.totalLoopCount=0;
     }
   }
   // ~ConfigureUsingZigzag(){
@@ -101,22 +106,22 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         }
         if (funcOp.getName() ==
             "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
-          // l1Tiles[1] = 40;
-          // // TODO: Switch to 82 and true once correctness bugs are fixed.
-          // l1Tiles[2] = 0;
-          // dualBuffer = false;
-          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
-          l1Interchange = {0, 1, 2};
-          l1Tiles[0] = 0;
-          l1Tiles[1] = 0;
+          l1Tiles[1] = 40;
+          // TODO: Switch to 82 and true once correctness bugs are fixed.
           l1Tiles[2] = 0;
           dualBuffer = false;
+          // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
+          // l1Interchange = {0, 1, 2};
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 0;
+          // l1Tiles[2] = 0;
+          // dualBuffer = false;
         }
         if (funcOp.getName() ==
             "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64") {
-          // l1Tiles[0] = 0;
-          // l1Tiles[1] = 40;
-          // l1Tiles[2] = 100;
+          l1Tiles[0] = 0;
+          l1Tiles[1] = 40;
+          l1Tiles[2] = 100;
           // rootOp->emitWarning() << "YODEL: found a matmulTranspose to tile!\n";
           // l1Tiles[0] = 0;
           // l1Tiles[1] = 30;
@@ -126,10 +131,11 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           // l1Tiles[1] = 300;
           // l1Tiles[2] = 4;
           // l1Interchange = {0, 2, 1}; 
-          l1Tiles[0] = 0;
-l1Tiles[1] = 30;
-l1Tiles[2] = 40;
-l1Interchange = {0, 2, 1}; 
+          // l1Tiles[0] = 0;
+          // l1Tiles[1] = 30;
+          // l1Tiles[2] = 40;
+          // l1Interchange = {0, 2, 1};
+          // dualBuffer = false;
         }
         if (funcOp.getName() ==
             "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
@@ -166,24 +172,32 @@ l1Interchange = {0, 2, 1};
 }
 
 void ConfigureUsingZigzag::runOnOperation() {
+  FunctionOpInterface funcOp = getOperation();
+ // funcOp->emitWarning() << "BROCCOLI: looking at func... "<< funcOp.getName()<<" \n";
+  funcOp->emitWarning() << "\nPOPCORN: configureUsingZigZagPass: " << funcOp.getName() << "\n";
   if((this->tilingSchemes.compare( // only run this pass for Grapefruit
           "/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-tiled-nsnet.json") == 0) &&
           (this->workloads.compare("/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-nsnet-workloads.yaml") == 0)){
-            // if(!this->ts.valid){
-            //   getOperation()->emitWarning() << "\nWOW some kind of tile scheme initialization error!\n" << ts.errs;
-            //   return;
-            // }
-            // else{
-            //   getOperation()->emitWarning() << "\nWOW the tilescheme file name is ." << this->tilingSchemes << ". \nexport file name is ."<<this->workloads <<".\nalso tester is "<< this->tester << "\nparsed tile scheme is "<< ts.str() << "\n"; 
-            // }     
-  
-
+            if(!this->ts.valid){
+              //getOperation()->emitWarning() << "\nWOW some kind of tile scheme initialization error!\n" << ts.errs;
+              return;
+            }
+            else{
+              //getOperation()->emitWarning() << "\nWOW the tilescheme file name is ." << this->tilingSchemes << ". \nexport file name is ."<<this->workloads <<".\nalso tester is "<< this->tester << "\nparsed tile scheme is "<< ts.str() << "\n"; 
+              //getOperation()->emitWarning() << "WOW loopCount is " << this->ts.totalLoopCount<< "\n";
+              this->ts.totalLoopCount = (this->ts.totalLoopCount +1);
+            }     
+    std::string funcStr;
+    llvm::raw_string_ostream rs = llvm::raw_string_ostream(funcStr);
+    funcOp.print(rs);
+   // funcOp->emitWarning() << "BROCCOLI: looking at func... "<< funcOp.getName()<<" defined as "<<rs.str() <<"\n";
   }
   else{
+   // funcOp->emitWarning() << "CARROT: tilingScheme is " << this->tilingSchemes << "\n";
     return;
   }
 
-  FunctionOpInterface funcOp = getOperation();
+  // FunctionOpInterface funcOp = getOperation();
 
   // erase any translation info created by Quidditch tiling pass
   if (getTranslationInfo(funcOp)) {

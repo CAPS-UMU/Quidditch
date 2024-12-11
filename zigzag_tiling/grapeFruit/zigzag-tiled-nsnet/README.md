@@ -2,7 +2,7 @@
 
 [back to landing page](../../README.md)
 
-We try to tile all the nsnet kernels supported by xDSL, ~~but only manage to tile one kernel (for now)~~ but one tiling two of the kernels causes errors:
+We try to tile all the nsnet kernels supported by xDSL, ~~but only manage to tile one kernel (for now)~~ but tiling two of the kernels causes errors:
 
 | Kernel Name                                             | Successfully Tiled with ZigZag-y plan?                       |
 | ------------------------------------------------------- | ------------------------------------------------------------ |
@@ -61,9 +61,7 @@ Commands run to get cycle count:
   dualBuffer = false;
   ```
 
-  ~~Doesn't fit in L1 error. (More details below)~~
-
-  No errors :D
+  Doesn't fit in L1 error. (More details below)
 
 - ["main$async_dispatch_7_matmul_transpose_b_1x600x400_f64"](https://github.com/EmilySillars/zigzag/blob/manual-examples/tiling-nsnet/dispatch_7_matmul_transpose_b_1x600x400_f64.md)
 
