@@ -6,6 +6,7 @@
 #include "iree/compiler/Codegen/Utils/Utils.h"
 
 #include <stdio.h>
+#include <unordered_map> // to store parsed tiling schemes in a hash table
 #include <string.h>
 #include <fstream> // to open tiling scheme file
 #include <sstream>
@@ -47,4 +48,27 @@ struct TilingScheme {
 void updateErrs(std::string err);
 void updateWorkloads(std::string wrkload);
 };
+
+//  std::unordered_map<std::string, std::string> upgjkgh;
+typedef std::unordered_map<std::string, struct quidditch::TilingScheme> TileInfoTbl;
+
+
+
+TileInfoTbl* fillTileInfoTable(TileInfoTbl* tbl, std::string filePath);
+
+
+
+/*
+hashtable from string --> tilingScheme object
+tileConfig Object supports
+- printing itself out
+- exporting its tile-sizes and interchange fields as Small<Int>
+
+minimal test:
+have QuidditchTarget.cpp creates empty hashtable. 
+Then, tries to open the json file,  
+- if this is possible, continue with configureTiling pass. 
+- If filepath is empry, SKIP tiling pass with WARNING.
+- if file path is NOT empty and DOES NOT EXIST, set invalid to true, and have configure tiling pass fail inside its constructor
+*/
 }

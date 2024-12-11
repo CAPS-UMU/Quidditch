@@ -3,6 +3,7 @@
 
 include "mlir/Pass/PassBase.td"
 
+
 def LinkExecutablesPass : Pass<"quidditch-link-executables", "mlir::ModuleOp"> {
   let description = [{
     Combines all `hal.executable.variant`s of the same target into a single
@@ -29,17 +30,18 @@ def ConfigureForSnitchPass
   : InterfacePass<"quidditch-configure-for-snitch",
       "mlir::FunctionOpInterface">;
 
-def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::FunctionOpInterface"> {
-  let summary = "Annotate linalg operations with ZigZag Tiling Schemes, OR export linalg ops as ZigZag workloads.";
-  //let constructor = "createConfigureUsingZigzag()";
-  let options = [
-    Option<"tilingSchemes", "tiling-schemes", "std::string", /*default=*/"",
-           "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
-    Option<"workloads", "workloads", "std::string", /*default=*/"",
-           "Name of a yaml file to which we export the zigzag workload representation of each linalg operation.">,
-  ];
-}
+// def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::FunctionOpInterface"> {
+//   let summary = "Annotate linalg operations with ZigZag Tiling Schemes, OR export linalg ops as ZigZag workloads.";
+//   //let constructor = "createConfigureUsingZigzag()";
+//   let options = [
+//     Option<"tilingSchemes", "tiling-schemes", "std::string", /*default=*/"",
+//            "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
+//     Option<"workloads", "workloads", "std::string", /*default=*/"",
+//            "Name of a yaml file to which we export the zigzag workload representation of each linalg operation.">,
+//   ];
+// }
 //IREE::HAL::ExecutableVariantOp
+//let constructor = "mlir::polygeist::createConvertParallelToGPUPass2()";
 // def ConfigureTiles : Pass<"quidditch-configure-tiles", "mlir::ModuleOp"> {
 def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionOpInterface"> {
   let summary = "Annotate linalg operations with tile sizes";
@@ -49,11 +51,14 @@ def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionO
     Alternatively, if the export option is not empty, export all iree-defined kernels 
     (that contain linalg operations) to a JSON file.
   }];
+  // let constructor = "ConfigureTiles(const quidditch::ConfigureTilesOptions &options, bool valid)";
     let options = [
     Option<"importTilingSchemes", "import-tiling-schemes", "std::string", /*default=*/"",
            "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
     Option<"exportUntiled", "export-untiled", "std::string", /*default=*/"",
            "Name of a JSON file to which we export untiled linalg operations.">,
+    Option<"tablePointer", "TODORemoveThisOption", "std::uintptr_t", /*default=*/"0",
+           "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
   ];
 }
 

@@ -31,7 +31,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "ZigzagUtils.h"
+#include "TilingScheme.h"
 
 namespace quidditch {
 #define GEN_PASS_DEF_ZIGZAGTILING

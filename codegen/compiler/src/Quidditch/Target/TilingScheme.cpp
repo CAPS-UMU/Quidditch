@@ -1,4 +1,4 @@
-#include "ZigzagUtils.h"
+#include "TilingScheme.h"
 
 // using namespace quidditch;
 using namespace mlir;
@@ -6,6 +6,12 @@ using namespace mlir::iree_compiler;
 
 // Tiling Scheme Functions defined below
 namespace quidditch {
+
+TileInfoTbl* fillTileInfoTable(TileInfoTbl* tbl, std::string filePath){
+  TileInfoTbl* result = tbl;
+  return result;
+}
+
 void TilingScheme::setTotalLoopCount() {
   unsigned total = 0;
   for (const auto &bound : bounds) {

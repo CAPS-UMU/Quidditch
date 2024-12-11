@@ -50,6 +50,8 @@
 #include "LibraryBuilder.h"
 #include "Passes.h"
 
+#include "TilingScheme.h"
+
 using namespace mlir;
 using namespace mlir::iree_compiler;
 using namespace quidditch::Snitch;
@@ -83,6 +85,7 @@ struct QuidditchTargetOptions {
   bool assertCompiled = false;
   std::string importTilingSchemes = ""; // added for Configure Tiles Pass
   std::string exportUntiled = ""; // added for Configure Tiles Pass
+  quidditch::TileInfoTbl tileInfo = quidditch::TileInfoTbl();
   std::string zigzagWorkloads = ""; // added for Configure Using ZigZag Pass
   std::string zigzagTilingSchemes = ""; // added for Configure Using ZigZag Pass
   std::string zigzagTilingScheme = ""; // added for ZigZag Tiling Pass
@@ -198,11 +201,14 @@ public:
     modulePassManager.addPass(createMaterializeUserConfigsPass());
     FunctionLikeNest funcPassManager(modulePassManager);
     funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
+    // funcPassManager.addPass([&] {
+    //       return quidditch::createConfigureUsingZigzag({targetOptions.zigzagTilingSchemes, targetOptions.zigzagWorkloads});
+    //     });
     funcPassManager.addPass([&] {
-          return quidditch::createConfigureUsingZigzag({targetOptions.zigzagTilingSchemes, targetOptions.zigzagWorkloads});
-        });
-    funcPassManager.addPass([&] {
-          return quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled});
+          //return quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}, quidditch::fillTileInfoTable(&targetOptions.tileInfo,targetOptions.importTilingSchemes));
+          auto tilingConfigPass = quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled, (std::uintptr_t) quidditch::fillTileInfoTable(&targetOptions.tileInfo,targetOptions.importTilingSchemes)});
+          //tilingConfigPass->setTable(quidditch::fillTileInfoTable(&targetOptions.tileInfo,targetOptions.importTilingSchemes));
+          return tilingConfigPass;        
         });
     // modulePassManager.addPass(quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}));
     // modulePassManager.addPass(quidditch::createConfigureTiles({"yodelayheehoooo~~~!", targetOptions.exportUntiled}));
