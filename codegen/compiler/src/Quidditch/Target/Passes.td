@@ -41,7 +41,7 @@ def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::Functio
 }
 //IREE::HAL::ExecutableVariantOp
 // def ConfigureTiles : Pass<"quidditch-configure-tiles", "mlir::ModuleOp"> {
-def ConfigureTiles : Pass<"quidditch-configure-tiles", "mlir::ModuleOp"> {
+def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionOpInterface"> {
   let summary = "Annotate linalg operations with tile sizes";
   let description = [{
     Within each iree-defined kernel, annotate the root linalg operation with a tiling schemes (tile sizes + loop interchange).

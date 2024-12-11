@@ -1,8 +1,16 @@
-# ZigZag Tiling
+# Auto Tiling
 
-This is the landing page for all things ZigZag tiling in Quidditch.
+This is the landing page for all things ~~ZigZag~~ automated tiling in Quidditch.
 
-[TOC]
+Next Steps:
+
+1. Resolve convert to LLVM error from dispatch7
+   - What does MLIR look like before the partialConversionPass runs (when the example works)
+   - What does MLIR look like *after* the partialConversionPass runs (when the example works)
+   - What does MLIR look like before the partialConversionPass runs (when the example does NOT work)
+2. Add multi-level tiling
+3. where are ALL the nsnet kernels? We want to see ALL of them! (print them out? how are some getting converted to LLVM? where is the LLVM backend bypass switch?)
+4. Create a dumb automatic tile-size oracle?
 
 
 

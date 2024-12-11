@@ -201,11 +201,11 @@ public:
     funcPassManager.addPass([&] {
           return quidditch::createConfigureUsingZigzag({targetOptions.zigzagTilingSchemes, targetOptions.zigzagWorkloads});
         });
-    // funcPassManager.addPass([&] {
-    //       return quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled});
-    //     });
-    modulePassManager.addPass(quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}));
-    modulePassManager.addPass(quidditch::createConfigureTiles({"yodelayheehoooo~~~!", targetOptions.exportUntiled}));
+    funcPassManager.addPass([&] {
+          return quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled});
+        });
+    // modulePassManager.addPass(quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}));
+    // modulePassManager.addPass(quidditch::createConfigureTiles({"yodelayheehoooo~~~!", targetOptions.exportUntiled}));
   }
 
   void buildTranslationPassPipeline(IREE::HAL::ExecutableTargetAttr targetAttr,

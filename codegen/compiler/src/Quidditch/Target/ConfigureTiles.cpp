@@ -63,28 +63,28 @@ void ConfigureTiles::runOnOperation() {
   //   return;
 
   // }
-  ModuleOp moduleOp = getOperation();
-    std::string funcStr;
-    llvm::raw_string_ostream rs = llvm::raw_string_ostream(funcStr);
-    moduleOp.print(rs);
-   // moduleOp->emitWarning() << "POPCORN: "<< this->tester << " before walk, acc is ."<< acc << "."<< rs.str()<<"\n";
-  this->acc ++;
-    moduleOp.walk([&](FunctionOpInterface funcOp){
-      this->acc ++;
-      funcOp->emitWarning() << "\nPOPCORN: " << funcOp.getName() << "\t." << this->tester << ".\n";
-      // funcOp->emitWarning() << "\nPOPCORN: tester is ."<< this->tester << ". and looking at func... "<< funcOp.getName()<<"\n";
-      //this->tester = funcOp.getName();
-    });
+  // ModuleOp moduleOp = getOperation();
+  //   std::string funcStr;
+  //   llvm::raw_string_ostream rs = llvm::raw_string_ostream(funcStr);
+  //   moduleOp.print(rs);
+  //  // moduleOp->emitWarning() << "POPCORN: "<< this->tester << " before walk, acc is ."<< acc << "."<< rs.str()<<"\n";
+  // this->acc ++;
+  //   moduleOp.walk([&](FunctionOpInterface funcOp){
+  //     this->acc ++;
+  //     funcOp->emitWarning() << "\nPOPCORN: " << funcOp.getName() << "\t." << this->tester << ".\n";
+  //     // funcOp->emitWarning() << "\nPOPCORN: tester is ."<< this->tester << ". and looking at func... "<< funcOp.getName()<<"\n";
+  //     //this->tester = funcOp.getName();
+  //   });
    //moduleOp->emitWarning() << "POPCORN: "<< this->tester << " after walk, acc is ."<< acc << ".\n";
     // emitWarning(moduleOp.getLoc(), "Replaced ")
     //     << xDSLFunctionsReplaced << " out of " << xDSLFunctionsEncountered
     //     << " kernels with LLVM implementations as they failed to compile";
 }
 
-// std::unique_ptr<InterfacePass<mlir::FunctionOpInterface>>
-// createConfigureUsingZigzag(const quidditch::ConfigureUsingZigzagOptions &options) {
-//   return std::make_unique<ConfigureUsingZigzag>(options);
-// }
+std::unique_ptr<InterfacePass<mlir::FunctionOpInterface>>
+createConfigureTiles(const quidditch::ConfigureTilesOptions &options) {
+  return std::make_unique<ConfigureTiles>(options);
+}
 // std::unique_ptr<OperationPass<IREE::HAL::ExecutableVariantOp>>
 // createReconcileTranslationInfoPass() {
 //   return std::make_unique<ReconcileTranslationInfoPass>();
