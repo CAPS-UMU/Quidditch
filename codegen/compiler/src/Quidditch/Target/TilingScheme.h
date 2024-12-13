@@ -22,40 +22,36 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringRef.h"
+// #include "mlir/IR/BuiltinTypes.h"
 
 namespace quidditch{
 struct TilingScheme {
   bool valid = false;
-  uint64_t totalLoopCount = 0;
-  std::vector<std::vector<int>> bounds;
+  std::vector<std::vector<int>> tiles;
   std::vector<std::vector<int>> order;
-  std::vector<std::vector<int>> finalIndices;
   TilingScheme() = default;
-  void initialize(std::string filename, std::string filename2 = "");
   std::string str();
   std::string errs = "";
   std::string workloads = "DONKEY";
   std::string workloadFileName = "";
-  bool exportWorkloadsToFile();
+  bool getTiles_flat( llvm::SmallVector<int64_t>& out);
+  bool getOrder_flat( llvm::SmallVector<int64_t>& out);
+
   friend std::stringstream &operator<<(std::stringstream &ss,
                                        const struct TilingScheme &ts);
-  int findSubloop(size_t i, size_t j);
-  void setTotalLoopCount();
-  void buildFinalIndices();
-  void parseTilingScheme(llvm::StringRef fileContent);
-  void parseListOfListOfInts(llvm::json::Object *obj, std::string listName,
-                             std::vector<std::vector<int>> &out);
-void updateErrs(std::string err);
-void updateWorkloads(std::string wrkload);
+
+
 };
 
 //  std::unordered_map<std::string, std::string> upgjkgh;
 typedef std::unordered_map<std::string, struct quidditch::TilingScheme> TileInfoTbl;
 
-
-
-TileInfoTbl* fillTileInfoTable(TileInfoTbl* tbl, std::string filePath);
-
+bool parseTilingSchemes(TileInfoTbl* tbl, llvm::StringRef fileContent, std::string& errs);
+struct TilingScheme parseTilingScheme(llvm::json::Value v, std::string& errs);
+TileInfoTbl* fillTileInfoTable(TileInfoTbl* tbl, const std::string& filePath, std::string& errs);
+bool parseListOfListOfInts(llvm::json::Object *obj,
+                                         std::string listName,
+                                         std::vector<std::vector<int>> &out, std::string& errs);
 
 
 /*

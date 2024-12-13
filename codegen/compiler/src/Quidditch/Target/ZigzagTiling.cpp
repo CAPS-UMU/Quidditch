@@ -181,7 +181,7 @@ ZigzagTiling::coconut(RewriterBase &rewriter,
           << "valid: " << this->ts.valid
           << " i found a ZigZag input :) tilingScheme is ["
           << this->tilingScheme << "]\n";
-      this->ts.initialize(tilingScheme);
+     // this->ts.initialize(tilingScheme);
       getOperation()->emitWarning()
           << "zigzag parsed tilingScheme is [" << this->ts.str()
           << "] valid: " << this->ts.valid << "\n";

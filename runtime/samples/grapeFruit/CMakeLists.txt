@@ -1,6 +1,6 @@
 
 iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64")
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-import-tiles=grapefruit.json --iree-quidditch-zigzag-tiling-schemes=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-tiled-nsnet.json --iree-quidditch-zigzag-workloads=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-nsnet-workloads.yaml)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-import-tiles=/home/hoppip/Quidditch/zigzag_tiling/markus-tile-sizes.json)
 quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-zigzag-tiling-schemes=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-tiled-nsnet.json --iree-quidditch-zigzag-workloads=/home/hoppip/Quidditch/zigzag_tiling/grapeFruit/zigzag-tiled-nsnet/zigzag-nsnet-workloads.yaml)
 
 add_library(grapeFruit_util grapeFruit_util.c)

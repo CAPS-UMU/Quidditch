@@ -51,6 +51,7 @@
 #include "Passes.h"
 
 #include "TilingScheme.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::iree_compiler;
@@ -84,11 +85,13 @@ struct QuidditchTargetOptions {
   std::string toolChainRoot;
   bool assertCompiled = false;
   std::string importTilingSchemes = ""; // added for Configure Tiles Pass
-  std::string exportUntiled = ""; // added for Configure Tiles Pass
-  quidditch::TileInfoTbl tileInfo = quidditch::TileInfoTbl();
-  std::string zigzagWorkloads = ""; // added for Configure Using ZigZag Pass
+  std::string exportUntiled = "";       // added for Configure Tiles Pass
+  quidditch::TileInfoTbl tileInfo =
+      quidditch::TileInfoTbl(); // added for Configure Tiles Pass
+  std::string tableInfoErrs = "FROG ";
+  std::string zigzagWorkloads = "";     // added for Configure Using ZigZag Pass
   std::string zigzagTilingSchemes = ""; // added for Configure Using ZigZag Pass
-  std::string zigzagTilingScheme = ""; // added for ZigZag Tiling Pass
+  std::string zigzagTilingScheme = "";  // added for ZigZag Tiling Pass
   // TODO: This should actually be 112640 but DMA stack overflows. Ooopsie!
   unsigned l1MemoryBytes = 100000;
 
@@ -118,23 +121,32 @@ struct QuidditchTargetOptions {
                        "(containing the toolchain file)"));
     // added for Configure Tiles Pass
     binder.opt<std::string>(
-        "iree-quidditch-import-tiles", importTilingSchemes, llvm::cl::cat(category),
-        llvm::cl::desc("Path to a JSON file from which we import tiling schemes"));
+        "iree-quidditch-import-tiles", importTilingSchemes,
+        llvm::cl::cat(category),
+        llvm::cl::desc(
+            "Path to a JSON file from which we import tiling schemes"));
     binder.opt<std::string>(
         "iree-quidditch-export-untiled", exportUntiled, llvm::cl::cat(category),
-        llvm::cl::desc("Path to a JSON file to which we export untiled linalg operations."));
+        llvm::cl::desc("Path to a JSON file to which we export untiled linalg "
+                       "operations."));
     // added for Configure Using ZigZag Pass
     binder.opt<std::string>(
-        "iree-quidditch-zigzag-workloads", zigzagWorkloads, llvm::cl::cat(category),
-        llvm::cl::desc("Path to a yaml file to which we export zigzag workloads"));
+        "iree-quidditch-zigzag-workloads", zigzagWorkloads,
+        llvm::cl::cat(category),
+        llvm::cl::desc(
+            "Path to a yaml file to which we export zigzag workloads"));
     // added for Configure Using ZigZag Pass
     binder.opt<std::string>(
-        "iree-quidditch-zigzag-tiling-schemes", zigzagTilingSchemes, llvm::cl::cat(category),
-        llvm::cl::desc("Path to the json file representing the ZigZag tiling schemes."));
+        "iree-quidditch-zigzag-tiling-schemes", zigzagTilingSchemes,
+        llvm::cl::cat(category),
+        llvm::cl::desc(
+            "Path to the json file representing the ZigZag tiling schemes."));
     // added for ZigZag Tiling Pass
     binder.opt<std::string>(
-        "iree-quidditch-zigzag-tiling-scheme", zigzagTilingScheme, llvm::cl::cat(category),
-        llvm::cl::desc("Path to the json file representing the ZigZag tiling scheme."));
+        "iree-quidditch-zigzag-tiling-scheme", zigzagTilingScheme,
+        llvm::cl::cat(category),
+        llvm::cl::desc(
+            "Path to the json file representing the ZigZag tiling scheme."));
     binder.opt<bool>(
         "iree-quidditch-assert-compiled", assertCompiled,
         llvm::cl::cat(category),
@@ -201,17 +213,19 @@ public:
     modulePassManager.addPass(createMaterializeUserConfigsPass());
     FunctionLikeNest funcPassManager(modulePassManager);
     funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
-    // funcPassManager.addPass([&] {
-    //       return quidditch::createConfigureUsingZigzag({targetOptions.zigzagTilingSchemes, targetOptions.zigzagWorkloads});
-    //     });
+
     funcPassManager.addPass([&] {
-          //return quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}, quidditch::fillTileInfoTable(&targetOptions.tileInfo,targetOptions.importTilingSchemes));
-          auto tilingConfigPass = quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled, (std::uintptr_t) quidditch::fillTileInfoTable(&targetOptions.tileInfo,targetOptions.importTilingSchemes)});
-          //tilingConfigPass->setTable(quidditch::fillTileInfoTable(&targetOptions.tileInfo,targetOptions.importTilingSchemes));
-          return tilingConfigPass;        
-        });
-    // modulePassManager.addPass(quidditch::createConfigureTiles({targetOptions.importTilingSchemes, targetOptions.exportUntiled}));
-    // modulePassManager.addPass(quidditch::createConfigureTiles({"yodelayheehoooo~~~!", targetOptions.exportUntiled}));
+      auto tablePointer = quidditch::fillTileInfoTable(
+          &targetOptions.tileInfo, targetOptions.importTilingSchemes,
+          targetOptions.tableInfoErrs);
+      if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
+        llvm::report_fatal_error(llvm::StringRef(targetOptions.tableInfoErrs),
+                                 false);
+      }
+      return quidditch::createConfigureTiles({targetOptions.importTilingSchemes,
+                                              targetOptions.exportUntiled,
+                                              (std::uintptr_t)tablePointer});
+    });
   }
 
   void buildTranslationPassPipeline(IREE::HAL::ExecutableTargetAttr targetAttr,
@@ -229,7 +243,8 @@ public:
         .addPass(createFuseTensorPadWithConsumerPass)
         .addPass(createConcretizePadResultShapePass)
         .addPass([&] {
-          return quidditch::createZigzagTiling({targetOptions.zigzagTilingScheme});
+          return quidditch::createZigzagTiling(
+              {targetOptions.zigzagTilingScheme});
         })
         .addPass([] {
           return quidditch::createTensorTilePass({quidditch::TilingLevel::L1});
