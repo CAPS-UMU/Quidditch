@@ -72,7 +72,7 @@ bool parseTilingSchemes(TileInfoTbl *tbl, llvm::StringRef fileContent,
     }
   }
   errs = ss.str();
-  return false; //return true;
+  return true;
 }
 
 struct TilingScheme parseTilingScheme(llvm::json::Value v,

@@ -215,7 +215,7 @@ public:
     funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
 
     funcPassManager.addPass([&] {
-      auto tablePointer = quidditch::fillTileInfoTable(
+      quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
           &targetOptions.tileInfo, targetOptions.importTilingSchemes,
           targetOptions.tableInfoErrs);
       if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
@@ -242,10 +242,10 @@ public:
         .addPass(createCSEPass)
         .addPass(createFuseTensorPadWithConsumerPass)
         .addPass(createConcretizePadResultShapePass)
-        .addPass([&] {
-          return quidditch::createZigzagTiling(
-              {targetOptions.zigzagTilingScheme});
-        })
+        // .addPass([&] {
+        //   return quidditch::createZigzagTiling(
+        //       {targetOptions.zigzagTilingScheme});
+        // })
         .addPass([] {
           return quidditch::createTensorTilePass({quidditch::TilingLevel::L1});
         })

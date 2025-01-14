@@ -84,6 +84,19 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           l1Tiles[0] = 0;
           l1Tiles[1] = 40;
           l1Tiles[2] = 100;
+          // l1Tiles[0] = 0; // zigzag flat
+          // l1Tiles[1] = 200; // zigzag flat
+          // l1Tiles[2] = 5; // zigzag flat
+          // l1Interchange = {0, 1, 2}; // zigzag flat
+          // l1Tiles[0] = 0; // bigger row dim
+          // l1Tiles[1] = 64; // bigger row dim
+          // l1Tiles[2] = 80; // bigger row dim
+          // l1Tiles[0] = 0; // smaller row dim
+          // l1Tiles[1] = 32; // smaller row dim
+          // l1Tiles[2] = 120; // smaller row dim
+          // l1Tiles[0] = 0; // will-it-fit
+          // l1Tiles[1] = 40; // will-it-fit
+          // l1Tiles[2] = 120; // will-it-fit
         }
         if (funcOp.getName() ==
             "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
@@ -102,6 +115,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
 void ConfigureForSnitch::runOnOperation() {
   FunctionOpInterface funcOp = getOperation();
+  
   if (getTranslationInfo(funcOp))
     return;
 

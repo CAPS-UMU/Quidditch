@@ -30,7 +30,7 @@ Next Steps:
 Inside `Quidditch` directory, do
 
 ```
-source ./venv/bin/activate && cd zigzag_tiling
+source ./venv/bin/activate
 ```
 
 After making changes to quidditch, rebuild with 
@@ -42,8 +42,14 @@ cd build; ninja -j 20
 Run test case with
 
 ```
-someday I will make a script
+someday I will make a script; until then, do the following
 ```
+
+```
+../toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/GrapeFruit
+```
+
+
 
 ## I. Setup Notes 
 
@@ -134,7 +140,7 @@ Apparently it's slower than Quidditch's default tiling, despite [ZigZag's estima
 | NsNet2                                                     | 1110267     | 144731.0                                                     |
 | GrapeFruit (NeNet2 with one zigzag-tiled matmul transpose) | 1410139     | 107527.0                                                     |
 | NsNet2 / GrapeFruit                                        | 0.787       | 1.346                                                        |
-
+| NsNet2 / GrapeFruit (tiling [0,40,120]) | 1110671 | N/A
 ## V. Automate ZigZag Tiling
 
 - Work In Progress
