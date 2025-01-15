@@ -34,13 +34,13 @@ LoweringConfigAttr LoweringConfigAttr::get(MLIRContext *context,
                                            ArrayRef<int64_t> l1Tiles,
                                            ArrayRef<int64_t> l1TilesInterchange,
                                            bool dualBuffer,
-                                           uint64_t zigzagID) {
+                                           ArrayRef<int64_t> myrtleCost) {
   l1Tiles = dropTrailingZeros(l1Tiles);
   auto interchange = llvm::to_vector(l1TilesInterchange);
   llvm::erase_if(interchange,
                  [&](int64_t value) { return value >= l1Tiles.size(); });
   return Base::get(context, dropTrailingZeros(workgroupTiles), l1Tiles,
-                   interchange, dualBuffer, zigzagID);
+                   interchange, dualBuffer, myrtleCost);
 }
 
 //===----------------------------------------------------------------------===//

@@ -134,8 +134,31 @@ bool parseListOfListOfInts(llvm::json::Object *obj, std::string listName,
 
 bool parseListOfInts(llvm::json::Object *obj, std::string listName,
                      std::vector<int> &out, std::string &errs) {
-  std::stringstream ss;
-  errs = ss.str();
+  llvm::json::Value *bnds = obj->get(StringRef(listName));
+  if (!bnds) { 
+    std::stringstream ss;
+    ss << "\nError: field labeled '" << listName << "' does not exist \n ";
+    errs = ss.str();
+    return false;
+  }
+  if (!bnds->getAsArray()) { // getAsArray returns a (const json::Array *)
+    std::stringstream ss;
+    ss << "\nError: field labeled '" << listName << "' is not a JSON array \n ";
+    errs = ss.str();
+    return false;
+  }
+  llvm::json::Path::Root Root("Try-to-parse-integer");
+  int theNumber;
+  for (const auto &elt :
+         *(bnds->getAsArray())) { // loop over a json::Array type
+      if (!fromJSON(elt, theNumber, Root)) {
+        std::stringstream ss;
+        ss << llvm::toString(Root.getError()) << "\n";
+        errs = ss.str();
+        return false;
+      }
+      out.push_back(theNumber);
+    }
   return true;
 }
 
@@ -170,6 +193,17 @@ bool parseBool(llvm::json::Object *obj, std::string boolName, bool &out,
 //   fs.close();
 //   return true;
 // }
+
+bool TilingScheme::getMyrtleCost(llvm::SmallVector<int64_t> &out) {
+  if (out.size() != myrtleCost.size()) {
+    return false;
+  } else {
+    for (size_t i = 0; i < tiles.size(); i++) {
+      out[i] = (int64_t)myrtleCost[i];
+    }
+  }
+  return true;
+}
 
 bool TilingScheme::getTiles_flat(llvm::SmallVector<int64_t> &out) {
   if (out.size() != tiles.size()) {
@@ -217,6 +251,12 @@ std::stringstream &operator<<(std::stringstream &ss,
       ss << " " << pos << " ";
     }
     ss << "] ";
+  }
+  ss << "]\n";
+  ss << "dual buffer: " << ts.dualBuffer << "\n";
+  ss << "myrtle cost: [ ";
+  for (const auto& cost : ts.myrtleCost){
+    ss << " " << cost << " ";
   }
   ss << "]\n}";
   return ss;

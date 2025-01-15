@@ -37,13 +37,13 @@ struct TilingScheme {
   std::string str();
   bool getTiles_flat( llvm::SmallVector<int64_t>& out);
   bool getOrder_flat( llvm::SmallVector<int64_t>& out);
+  bool getMyrtleCost( llvm::SmallVector<int64_t>& out);
   bool getDualBuffer(){return dualBuffer;}
   // overloaded output operator
   friend std::stringstream &operator<<(std::stringstream &ss,
                                        const struct TilingScheme &ts);
 };
 
-//  std::unordered_map<std::string, std::string> upgjkgh;
 typedef std::unordered_map<std::string, struct quidditch::TilingScheme> TileInfoTbl;
 
 bool parseTilingSchemes(TileInfoTbl* tbl, llvm::StringRef fileContent, std::string& errs);

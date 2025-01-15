@@ -2,6 +2,7 @@
 
 #include "Quidditch/Dialect/Snitch/IR/QuidditchSnitchAttrs.h"
 #include "TilingScheme.h"
+#include "Myrtle.h"
 #include "iree/compiler/Codegen/Dialect/Codegen/IR/IREECodegenAttrs.h"
 #include "iree/compiler/Codegen/Utils/CPUUtils.h"
 #include "iree/compiler/Codegen/Utils/Utils.h"
@@ -86,6 +87,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         SmallVector<int64_t> l1Tiles(3, 0);
         SmallVector<int64_t> l1Interchange = {2, 0, 1};
         bool dualBuffer = true;
+        SmallVector<int64_t> myrtleCost = {};
 
         // TODO: Figure out why it is that setting the third l1Tiles element to
         // 0 somehow results in this kernel having an l1 interchange of {0, 1}.
@@ -158,6 +160,13 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           return failure();
         }
         dualBuffer = ts.getDualBuffer();
+
+        std::string myErrs;
+
+        if(failed(myrtle::getCost(rootOp,l1Tiles, myrtleCost, myErrs))){
+          funcOp.emitWarning() << "ORANGE JUICE: " << myErrs;
+          return failure();
+        }
         //  (tbl->find(funcOp.getName().str()))->second();
         //   else if(){
         //     funcOp.emitWarning() << "Error importing tiling scheme for this
@@ -168,7 +177,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
                                       rootOp->getContext(), workgroupTiles,
-                                      l1Tiles, l1Interchange, dualBuffer));
+                                      l1Tiles, l1Interchange, dualBuffer, myrtleCost));
         return success();
       })
       .Default(success());
