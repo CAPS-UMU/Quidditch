@@ -58,15 +58,14 @@ bool parseTilingSchemes(TileInfoTbl *tbl, llvm::StringRef fileContent,
     errs = "\nError: top-level JSON object is empty\n";
     return false;
   }
-  // try to parse each function
+  // try to parse each tiling scheme from function name key
   std::stringstream ss;
   for (const auto &func : *O) {
     struct TilingScheme ts = parseTilingScheme(func.getSecond(), errs);
-    if(!ts.valid){
+    if (!ts.valid) {
       return false;
-    }
-    else{
-      tbl->insert(std::pair(func.getFirst().str(),ts));
+    } else {
+      tbl->insert(std::pair(func.getFirst().str(), ts));
       ss << func.getFirst().str() << ":\n";
       ss << ts;
     }
@@ -75,25 +74,26 @@ bool parseTilingSchemes(TileInfoTbl *tbl, llvm::StringRef fileContent,
   return true;
 }
 
-struct TilingScheme parseTilingScheme(llvm::json::Value v,
-                       std::string &errs) {
+struct TilingScheme parseTilingScheme(llvm::json::Value v, std::string &errs) {
   struct TilingScheme ts;
   auto O = v.getAsObject();
-  if(!O){
+  if (!O) {
     errs = "RHS of key_value pair is not a JSON object!";
     return ts;
   }
-  bool read_tile_sizes = parseListOfListOfInts(O,"tile-sizes",ts.tiles,errs);
-  bool read_loop_order = parseListOfListOfInts(O,"loop-order",ts.order,errs);
-  ts.valid = read_tile_sizes && read_loop_order;
+  bool read_tile_sizes = parseListOfListOfInts(O, "tile-sizes", ts.tiles, errs);
+  bool read_loop_order = parseListOfListOfInts(O, "loop-order", ts.order, errs);
+  bool read_dual_buffer = parseBool(O, "dual-buffer", ts.dualBuffer, errs);
+  ts.valid = read_tile_sizes && read_loop_order && read_dual_buffer;
   return ts;
 }
 
-bool parseListOfListOfInts(llvm::json::Object *obj,
-                                         std::string listName,
-                                         std::vector<std::vector<int>> &out, std::string& errs) {
+// TODO: call parseListOfInts inside parseListOfListOfInts
+bool parseListOfListOfInts(llvm::json::Object *obj, std::string listName,
+                           std::vector<std::vector<int>> &out,
+                           std::string &errs) {
   llvm::json::Value *bnds = obj->get(StringRef(listName));
-  if (!bnds) { // getAsArray returns a (const json::Array *)
+  if (!bnds) { 
     std::stringstream ss;
     ss << "\nError: field labeled '" << listName << "' does not exist \n ";
     errs = ss.str();
@@ -123,7 +123,7 @@ bool parseListOfListOfInts(llvm::json::Object *obj,
         std::stringstream ss;
         ss << llvm::toString(Root.getError()) << "\n";
         errs = ss.str();
-      return false;
+        return false;
       }
       sublist.push_back(bound);
     }
@@ -132,10 +132,31 @@ bool parseListOfListOfInts(llvm::json::Object *obj,
   return true;
 }
 
+bool parseListOfInts(llvm::json::Object *obj, std::string listName,
+                     std::vector<int> &out, std::string &errs) {
+  std::stringstream ss;
+  errs = ss.str();
+  return true;
+}
 
-
-
-
+bool parseBool(llvm::json::Object *obj, std::string boolName, bool &out,
+               std::string &errs) {
+  llvm::json::Value *theBool = obj->get(StringRef(boolName));
+  if (!theBool) { 
+    std::stringstream ss;
+    ss << "\nError: field labeled '" << boolName << "' does not exist \n ";
+    errs = ss.str();
+    return false;
+  }
+  if (!theBool->getAsBoolean()) { // getAsBoolean returns an optional boolean
+    std::stringstream ss;
+    ss << "\nError: field labeled '" << boolName << "' is not a boolean \n ";
+    errs = ss.str();
+    return false;
+  }
+  out = *(theBool->getAsBoolean());
+  return true;
+}
 
 // bool TilingScheme::exportWorkloadsToFile() {
 //   if (workloadFileName.compare("") == 0) {
@@ -150,37 +171,33 @@ bool parseListOfListOfInts(llvm::json::Object *obj,
 //   return true;
 // }
 
-bool TilingScheme::getTiles_flat( llvm::SmallVector<int64_t>& out){
-  if(out.size() != tiles.size()){
+bool TilingScheme::getTiles_flat(llvm::SmallVector<int64_t> &out) {
+  if (out.size() != tiles.size()) {
     return false;
-  }else{
-    for(size_t i = 0; i < tiles.size(); i++){
-      out[i] = (int64_t) tiles[i][0];
+  } else {
+    for (size_t i = 0; i < tiles.size(); i++) {
+      out[i] = (int64_t)tiles[i][0];
     }
   }
   return true;
 }
-  
-bool TilingScheme::getOrder_flat( llvm::SmallVector<int64_t>& out){
-    if(out.size() != order.size()){
+
+bool TilingScheme::getOrder_flat(llvm::SmallVector<int64_t> &out) {
+  if (out.size() != order.size()) {
     return false;
-  }else{
-    for(size_t i = 0; i < order.size(); i++){
-      out[i] = (int64_t) order[i][0];
+  } else {
+    for (size_t i = 0; i < order.size(); i++) {
+      out[i] = (int64_t)order[i][0];
     }
   }
   return true;
-
 }
-
 
 std::string TilingScheme::str() {
   std::stringstream ts_ss;
   ts_ss << *this;
   return ts_ss.str();
 }
-
-
 
 std::stringstream &operator<<(std::stringstream &ss,
                               const struct TilingScheme &ts) {
@@ -204,7 +221,5 @@ std::stringstream &operator<<(std::stringstream &ss,
   ss << "]\n}";
   return ss;
 }
-
-
 
 } // namespace quidditch

@@ -72,6 +72,8 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           // TODO: Switch to 82 and true once correctness bugs are fixed.
           l1Tiles[2] = 0;
           dualBuffer = false;
+          // TODO: Figure out why it is that setting the third l1Tiles element to 0
+          // somehow results in this kernel having an l1 interchange of {0, 1}.
         }
         if (funcOp.getName() ==
             "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64") {

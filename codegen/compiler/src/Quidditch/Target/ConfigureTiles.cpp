@@ -87,16 +87,30 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         SmallVector<int64_t> l1Interchange = {2, 0, 1};
         bool dualBuffer = true;
 
-        if (funcOp.getName() ==
-            "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
-          // TODO: Switch to 82 and true once correctness bugs are fixed.
-          dualBuffer = false;
-        }
+        // TODO: Figure out why it is that setting the third l1Tiles element to
+        // 0 somehow results in this kernel having an l1 interchange of {0, 1}.
+
+        // if (funcOp.getName() ==
+        //     "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
+        //   // TODO: Switch to 82 and true once correctness bugs are fixed.
+        //   dualBuffer = false;
+        // }
 
         if (tbl == 0) {
           funcOp.emitWarning() << "PEPPERMINT: Table pointer is zero!!";
           return failure();
         }
+        // else {
+        //   std::stringstream ss;
+        //   for (auto const &[key, val] : *tbl) {
+        //     ss << key // string (key)
+        //        << ':';
+        //     ss << val // string's value
+        //        << std::endl;
+        //   }
+        //   funcOp.emitWarning() << "\nThis is what we read in!!\n" << ss.str() << "\n";
+        //   return failure();
+        // }
 
         //     if (auto search = example.find(2); search != example.end())
         //     std::cout << "Found " << search->first << ' ' << search->second
@@ -122,7 +136,8 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //     "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
         //   quidditch::TilingScheme &ts = search->second;
         //   std::stringstream ss;
-        //   ss << "\nCARROT: Tile scheme I'm using for " << funcOp.getName().str()
+        //   ss << "\nCARROT: Tile scheme I'm using for " <<
+        //   funcOp.getName().str()
         //      << " is ";
         //   ss << ts << "\n";
         //   funcOp.emitWarning() << "MAPLE SYRUP\n";
@@ -142,6 +157,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           //                         "couldn't get l1 interchange!";
           return failure();
         }
+        dualBuffer = ts.getDualBuffer();
         //  (tbl->find(funcOp.getName().str()))->second();
         //   else if(){
         //     funcOp.emitWarning() << "Error importing tiling scheme for this
@@ -168,16 +184,15 @@ void ConfigureTiles::runOnOperation() {
 
   FunctionOpInterface funcOp = getOperation();
 
- 
-
   if (!tbl) { // export functions to json file
-  funcOp.emitWarning() << "\ncasper: tbl pointer invalid\n";
+    funcOp.emitWarning() << "\ncasper: tbl pointer invalid\n";
     return;
   }
 
-  // TODO: un-comment out check for translationInfo, instead of blindly overwriting it.
-  // if (getTranslationInfo(funcOp))
-  //   return;
+  // TODO: un-comment out check for translationInfo, instead of blindly
+  // overwriting it. 
+  if (getTranslationInfo(funcOp))
+     return;
 
   SmallVector<Operation *> computeOps = getComputeOps(funcOp);
   FailureOr<Operation *> rootOp = getRootOperation(computeOps);
@@ -200,17 +215,18 @@ void ConfigureTiles::runOnOperation() {
     return signalPassFailure();
   }
 
-  // TODO: un-comment out check for lowering config, instead of blindly overwriting it.
-  // auto loweringConfig =
-  //     getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
-  // if (!loweringConfig){
+  // TODO: un-comment out check for lowering config, instead of blindly
+  // overwriting it. 
+  auto loweringConfig =
+  getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
+  if (!loweringConfig){
 
   if (failed(setRootConfig(funcOp, rootOperation, tbl))) {
     funcOp.emitWarning() << "\nPEPPERMINT: cheesey star\n";
     return signalPassFailure();
   }
 
-  // }
+   }
 
   // The root configuration setting introduces `tensor.dim` operations.
   // Resolve those away.

@@ -212,7 +212,7 @@ public:
     }
     modulePassManager.addPass(createMaterializeUserConfigsPass());
     FunctionLikeNest funcPassManager(modulePassManager);
-    funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
+    //funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
 
     funcPassManager.addPass([&] {
       quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(

@@ -29,18 +29,18 @@ struct TilingScheme {
   bool valid = false;
   std::vector<std::vector<int>> tiles;
   std::vector<std::vector<int>> order;
+  std::vector<int> myrtleCost;
+  bool dualBuffer = false;
+  std::string errs = "";
+  // member funcs
   TilingScheme() = default;
   std::string str();
-  std::string errs = "";
-  std::string workloads = "DONKEY";
-  std::string workloadFileName = "";
   bool getTiles_flat( llvm::SmallVector<int64_t>& out);
   bool getOrder_flat( llvm::SmallVector<int64_t>& out);
-
+  bool getDualBuffer(){return dualBuffer;}
+  // overloaded output operator
   friend std::stringstream &operator<<(std::stringstream &ss,
                                        const struct TilingScheme &ts);
-
-
 };
 
 //  std::unordered_map<std::string, std::string> upgjkgh;
@@ -52,7 +52,12 @@ TileInfoTbl* fillTileInfoTable(TileInfoTbl* tbl, const std::string& filePath, st
 bool parseListOfListOfInts(llvm::json::Object *obj,
                                          std::string listName,
                                          std::vector<std::vector<int>> &out, std::string& errs);
-
+bool parseListOfInts(llvm::json::Object *obj,
+                                         std::string listName,
+                                         std::vector<int> &out, std::string& errs);
+bool parseBool(llvm::json::Object *obj,
+                                         std::string listName,
+                                          bool& out, std::string& errs);
 
 /*
 hashtable from string --> tilingScheme object
