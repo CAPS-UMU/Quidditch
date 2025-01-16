@@ -164,7 +164,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         std::string myErrs;
 
         if(failed(myrtle::getCost(rootOp,l1Tiles, myrtleCost, myErrs))){
-          funcOp.emitWarning() << "ORANGE JUICE: " << myErrs;
+          funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
           return failure();
         }
         //  (tbl->find(funcOp.getName().str()))->second();
@@ -231,7 +231,7 @@ void ConfigureTiles::runOnOperation() {
   if (!loweringConfig){
 
   if (failed(setRootConfig(funcOp, rootOperation, tbl))) {
-    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star\n";
+    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star set root config failed\n";
     return signalPassFailure();
   }
 
@@ -242,7 +242,7 @@ void ConfigureTiles::runOnOperation() {
   RewritePatternSet patterns(funcOp.getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
-    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star\n";
+    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star apply patterns and fold greedily failed\n";
     signalPassFailure();
   }
 }
