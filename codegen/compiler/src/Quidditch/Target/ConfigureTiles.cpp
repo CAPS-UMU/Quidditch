@@ -85,7 +85,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //   only applicable once on Occamy.
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
-        SmallVector<int64_t> l1Interchange = {2, 0, 1};
+        SmallVector<int64_t> l1Interchange = {1,1,1};//{2, 0, 1};
         bool dualBuffer = true;
         SmallVector<int64_t> myrtleCost = {};
 
@@ -163,7 +163,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         std::string myErrs;
 
-        if(failed(myrtle::getCost(rootOp,l1Tiles, myrtleCost, myErrs))){
+        if(failed(myrtle::getCost(rootOp,l1Tiles, l1Interchange, myrtleCost, myErrs))){
           funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
           return failure();
         }

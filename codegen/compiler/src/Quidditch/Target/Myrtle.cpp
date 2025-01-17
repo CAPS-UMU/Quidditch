@@ -8,12 +8,14 @@ using namespace mlir;
 
 namespace myrtle {
 
-LogicalResult getCost(Operation *rootOp, llvm::SmallVector<int64_t> &tileSizes,
-                      llvm::SmallVector<int64_t> &out, std::string &errs) {
+mlir::LogicalResult getCost(mlir::Operation *rootOp,
+                            llvm::SmallVector<int64_t> &tileSizes,
+                            llvm::SmallVector<int64_t> &interchange,
+                            llvm::SmallVector<int64_t> &out,
+                            std::string &errs) {
   return TypeSwitch<Operation *, LogicalResult>(rootOp)
       // only handle matmul transpose operations for now
       .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
-
         llvm::ArrayRef<int64_t> tiles = llvm::ArrayRef<int64_t>(tileSizes);
         const auto &dims = op.createFlatListOfOperandStaticDims();
 
@@ -38,36 +40,38 @@ LogicalResult getCost(Operation *rootOp, llvm::SmallVector<int64_t> &tileSizes,
 
         // print per operand!
         ss << "\n Input Operands...\n";
-        const auto& inputs = op.getRegionInputArgs();
-        for(const auto& arg : inputs){
+        const auto &inputs = op.getRegionInputArgs();
+        for (const auto &arg : inputs) {
           mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
           const auto &shape = op.getShape(operand);
-          ss << "\noperand with shape:[ ";
+          ss << "\noperand # " << operand->getOperandNumber()
+             << " with shape:[ ";
           for (const auto &num : shape) {
             ss << num << " ";
           }
           ss << " ]\n";
           // now print its map!!
-          const auto& map = op.getMatchingIndexingMap(operand);
+          const auto &map = op.getMatchingIndexingMap(operand);
           std::string os = "";
           llvm::raw_string_ostream ros = llvm::raw_string_ostream(os);
           map.print(ros);
           ros << "\n";
           ros << "... which applied to tile sizes is ";
-          const auto& relevantSizes = applyPermutationMap(map, tiles);
+          const auto &relevantSizes = applyPermutationMap(map, tiles);
           ros << "[ ";
-          for(const auto& sz : relevantSizes){
-            ros << sz << " "; 
-
+          for (const auto &sz : relevantSizes) {
+            ros << sz << " ";
           }
           ros << " ]\n";
           ss << ros.str();
+
           // now apply tile sizes to the map??? Is it possible??
-          //template <typename T> SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) 
-      //    ArrayRef (const SmallVectorTemplateCommon< U *, DummyT > &Vec, std::enable_if_t< std::is_convertible< U *const *, T const * >::value > *=nullptr)
- 	//Construct an ArrayRef<const T*> from a SmallVector<T*>. 
-
-
+          // template <typename T> SmallVector<T> applyPermutationMap(AffineMap
+          // map, llvm::ArrayRef<T> source)
+          //    ArrayRef (const SmallVectorTemplateCommon< U *, DummyT > &Vec,
+          //    std::enable_if_t< std::is_convertible< U *const *, T const *
+          //    >::value > *=nullptr)
+          // Construct an ArrayRef<const T*> from a SmallVector<T*>.
         }
 
         ss << "\n Output Operands...\n";
@@ -75,29 +79,116 @@ LogicalResult getCost(Operation *rootOp, llvm::SmallVector<int64_t> &tileSizes,
         for (const auto &arg : outputs) {
           mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
           const auto &shape = op.getShape(operand);
-          ss << "\noperand with shape:[ ";
+          ss << "\noperand # " << operand->getOperandNumber()
+             << " with shape:[ ";
           for (const auto &num : shape) {
             ss << num << " ";
           }
           ss << " ]\n";
-           // now print its map!!
-          const auto& map = op.getMatchingIndexingMap(operand);
+          // now print its map!!
+          const auto &map = op.getMatchingIndexingMap(operand);
           std::string os = "";
           llvm::raw_string_ostream ros = llvm::raw_string_ostream(os);
           map.print(ros);
           ros << "\n";
           ros << "... which applied to tile sizes is ";
-          const auto& relevantSizes = applyPermutationMap(map, tiles);
+          const auto &relevantSizes = applyPermutationMap(map, tiles);
           ros << "[ ";
-          for(const auto& sz : relevantSizes){
-            ros << sz << " "; 
-
+          for (const auto &sz : relevantSizes) {
+            ros << sz << " ";
           }
           ros << " ]\n";
           ss << ros.str();
         }
 
-        // /// Return the input block arguments of the region.
+        ss << "\nIn what order do we tile the dimensions?\n";
+        for (const auto &order : interchange) {
+          //    ss << "we tile with size " << tileSizes[order] << "\n";
+          ss << "we tile dimension # " << order << "...\n";
+          llvm::SmallVector<std::pair<Value, unsigned>> operandDimPairs =
+              llvm::SmallVector<std::pair<Value, unsigned>>(0);
+          op.mapIterationSpaceDimToAllOperandDims(order, operandDimPairs);
+          for (const auto &pear : operandDimPairs) {
+            // const auto &shape = op.getShape(pear.first);
+            Value firstOperand = pear.first;
+            unsigned firstOperandDim = pear.second;
+            // Trivial case: `dim` size is available in the operand type.
+            int64_t dimSize = llvm::cast<ShapedType>(firstOperand.getType())
+                                  .getShape()[firstOperandDim];
+            if (ShapedType::isDynamic(dimSize)) {
+              ss << "\ndimension of operand is dynamic. we cannot handle this "
+                    "right now\n";
+              errs = ss.str();
+              return failure();
+            }
+            ss << "which means we tile operand # _'s" << firstOperandDim
+               << "'s dimension with cardinality " << dimSize << "\n";
+
+            const auto &inputs = op.getRegionInputArgs();
+            for (const auto &arg : inputs) {
+              mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
+            
+              if(operand->is(firstOperand)){
+                ss << "\nwhich is to say operand # " << operand->getOperandNumber() << "\n";
+              }
+            }
+          }
+          // void mapIterationSpaceDimToAllOperandDims(unsigned dimPos,
+          // mlir::SmallVectorImpl<std::pair<Value, unsigned>>&
+          // operandDimPairs); find all operands defined on this dimension
+
+          //   void mapIterationSpaceDimToAllOperandDims(unsigned dimPos,
+          // mlir::SmallVectorImpl<std::pair<Value, unsigned>>&
+          // operandDimPairs); which means we tile operand __'s dimension __:
+        }
+     
+
+        errs = ss.str();
+        return failure();
+
+        // return success();
+      })
+      .Default([&](const auto &op) {
+        std::stringstream ss;
+        ss << "\nMyrtle: Only supporting matmul transpose operations at "
+              "the moment.\n";
+        errs = ss.str();
+        return failure();
+      });
+}
+
+bool getOperandDimPairsToTileInOrder(
+    const mlir::linalg::LinalgOp &op,
+    const llvm::SmallVector<int64_t> &interchange,
+    llvm::SmallVector<
+        llvm::SmallVector<std::pair<mlir::OpOperand *, int64_t>>>) {
+  return false;
+}
+
+void printSmallVector(llvm::SmallVector<int64_t> v, std::stringstream &ss) {
+  ss << "[ ";
+  for (int64_t e : v) {
+    ss << e << " ";
+  }
+  ss << "]";
+}
+
+
+
+
+
+
+}; // namespace myrtle
+
+
+
+
+
+
+
+/* Notes
+
+   // /// Return the input block arguments of the region.
         // Block::BlockArgListType getRegionInputArgs();
 
         // /// Return the output block arguments of the region.
@@ -149,26 +240,7 @@ LogicalResult getCost(Operation *rootOp, llvm::SmallVector<int64_t> &tileSizes,
         //   ros << "\n";
         // }
         // ss << ros.str();
-        //hoodle ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-        
-        errs = ss.str();
-        return failure();
-
-        // return success();
-      })
-      .Default([&](const auto &op) {
-        std::stringstream ss;
-        ss << "\nMyrtle: Only supporting matmul transpose operations at "
-              "the moment.\n";
-        errs = ss.str();
-        return failure();
-      });
-}
-
-}; // namespace myrtle
-
-/* Notes
+        // hoodle ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
