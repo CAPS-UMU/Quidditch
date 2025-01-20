@@ -22,14 +22,56 @@ Simple Analytical Cost Model for Tiling in Quidditch
 
 namespace myrtle {
 
+enum MEMSPACE { L3, L1};
+
+// Result of tiling an operand in dimension dim
+typedef struct LoopTileInfo {
+  llvm::SmallVector<int64_t> tileShape = {};
+  unsigned int tileCount = 0;
+  unsigned int dim = 0;
+  MEMSPACE mem = L3;
+  LoopTileInfo(unsigned int dimension, unsigned int count, MEMSPACE memory,
+               llvm::ArrayRef<int64_t> shape)
+      : tileShape({}), tileCount(count), dim(dimension), mem(memory) {
+    for (const auto &sz : shape) {
+      tileShape.push_back(sz);
+    }
+  }
+  //TODO: pick one: small vector or ArrayRef
+  LoopTileInfo(unsigned int dimension, unsigned int count, MEMSPACE memory,
+               llvm::SmallVector<int64_t> shape)
+      : tileShape({}), tileCount(count), dim(dimension), mem(memory) {
+    for (const auto &sz : shape) {
+      tileShape.push_back(sz);
+    }
+  }
+} LoopTileInfo;
+
+// Given that tiling is expressed as a nested loop,
+// what are the tile sizes and tile counts
+// for each operand at each loop nest depth?
+typedef struct OperandTileInfo {
+  mlir::OpOperand *operand = 0;
+  llvm::SmallVector<LoopTileInfo> loops = {};
+  OperandTileInfo(mlir::OpOperand *oper) : operand(oper) {}
+} OperandTileInfo;
+
+std::ostream& operator<<(std::ostream& os, const LoopTileInfo& lti);
+std::ostream& operator<<(std::ostream& os, const OperandTileInfo& oti);
+
 // get estimated cycle count for this kernel, given tiling config
 mlir::LogicalResult getCost(mlir::Operation *rootOp,
                             llvm::SmallVector<int64_t> &tileSizes,
                             llvm::SmallVector<int64_t> &interchange,
                             llvm::SmallVector<int64_t> &out, std::string &errs);
 
+bool tileLoopByLoop(mlir::linalg::LinalgOp &op,
+                    llvm::ArrayRef<int64_t> &tileSizes,
+                    llvm::ArrayRef<int64_t> &interchange,
+                    llvm::SmallVector<OperandTileInfo> &out, std::string &errs);
+
 // helper function to convert a small vector id int64_t to a string
-void printSmallVector(llvm::SmallVector<int64_t> v, std::stringstream &ss) ;
+void printSmallVector(llvm::SmallVector<int64_t> v, std::stringstream &ss);
 
 /*
 Name: getOperandDimPairsToTileInOrder
@@ -56,10 +98,10 @@ d2)  // let's nickname it W Operand 2: Shape 1x400, affine map (d0, d1, d2) ->
 [(I,1),(W,1)]].
 
 */
-bool getOperandDimPairsToTileInOrder(
-    const mlir::linalg::LinalgOp &op,
-    const llvm::SmallVector<int64_t> &interchange,
-    llvm::SmallVector<
-        llvm::SmallVector<std::pair<mlir::OpOperand *, int64_t>>>);
+// bool getOperandDimPairsToTileInOrder(
+//     const mlir::linalg::LinalgOp &op,
+//     const llvm::SmallVector<int64_t> &interchange,
+//     llvm::SmallVector<
+//         llvm::SmallVector<std::pair<mlir::OpOperand *, int64_t>>>);
 
 }; // namespace myrtle
