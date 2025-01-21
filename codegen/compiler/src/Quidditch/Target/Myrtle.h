@@ -22,7 +22,7 @@ Simple Analytical Cost Model for Tiling in Quidditch
 
 namespace myrtle {
 
-enum MEMSPACE { L3, L1};
+enum MEMSPACE { L3, L1 };
 
 // Result of tiling an operand in dimension dim
 typedef struct LoopTileInfo {
@@ -37,7 +37,7 @@ typedef struct LoopTileInfo {
       tileShape.push_back(sz);
     }
   }
-  //TODO: pick one: small vector or ArrayRef
+  // TODO: pick one: small vector or ArrayRef
   LoopTileInfo(unsigned int dimension, unsigned int count, MEMSPACE memory,
                llvm::SmallVector<int64_t> shape)
       : tileShape({}), tileCount(count), dim(dimension), mem(memory) {
@@ -53,11 +53,24 @@ typedef struct LoopTileInfo {
 typedef struct OperandTileInfo {
   mlir::OpOperand *operand = 0;
   llvm::SmallVector<LoopTileInfo> loops = {};
+  int64_t cycles = 0;
+  int64_t L3toL1reads = 0;
+  int64_t L1toRFreads = 0;
   OperandTileInfo(mlir::OpOperand *oper) : operand(oper) {}
+  void tileLoopByLoop(mlir::linalg::LinalgOp &op,
+                      llvm::ArrayRef<int64_t> &tileSizes,
+                      llvm::ArrayRef<int64_t> &interchange,
+                      MEMSPACE innermostLoopMemspace);
+  void tileOneLoopMore(mlir::linalg::LinalgOp &op,
+                      int64_t loopBound,
+                      int64_t dim,
+                      MEMSPACE memspace);
+  void computeValues(std::string& errs);
+
 } OperandTileInfo;
 
-std::ostream& operator<<(std::ostream& os, const LoopTileInfo& lti);
-std::ostream& operator<<(std::ostream& os, const OperandTileInfo& oti);
+std::ostream &operator<<(std::ostream &os, const LoopTileInfo &lti);
+std::ostream &operator<<(std::ostream &os, const OperandTileInfo &oti);
 
 // get estimated cycle count for this kernel, given tiling config
 mlir::LogicalResult getCost(mlir::Operation *rootOp,
@@ -65,7 +78,7 @@ mlir::LogicalResult getCost(mlir::Operation *rootOp,
                             llvm::SmallVector<int64_t> &interchange,
                             llvm::SmallVector<int64_t> &out, std::string &errs);
 
-bool tileLoopByLoop(mlir::linalg::LinalgOp &op,
+bool gatherInfoLoopByLoop(mlir::linalg::LinalgOp &op,
                     llvm::ArrayRef<int64_t> &tileSizes,
                     llvm::ArrayRef<int64_t> &interchange,
                     llvm::SmallVector<OperandTileInfo> &out, std::string &errs);

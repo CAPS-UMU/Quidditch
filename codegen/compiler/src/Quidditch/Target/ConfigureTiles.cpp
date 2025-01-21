@@ -164,16 +164,12 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         std::string myErrs;
 
         if(failed(myrtle::getCost(rootOp,l1Tiles, l1Interchange, myrtleCost, myErrs))){
-          funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+          //funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
           return failure();
+        }else{
+          //funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+
         }
-        //  (tbl->find(funcOp.getName().str()))->second();
-        //   else if(){
-        //     funcOp.emitWarning() << "Error importing tiling scheme for this
-        //     function's root operation."; return failure();
-        //   }
-        // class "std::__detail::_Node_iterator<std::pair<const std::string,
-        // quidditch::TilingScheme>, false, true>" has no member "second"
 
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
                                       rootOp->getContext(), workgroupTiles,

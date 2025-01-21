@@ -218,6 +218,9 @@ public:
       quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
           &targetOptions.tileInfo, targetOptions.importTilingSchemes,
           targetOptions.tableInfoErrs);
+          quidditch::TileInfoTbl * tablePointer2 = quidditch::exportTileInfoTable(
+          &targetOptions.tileInfo, targetOptions.importTilingSchemes,
+          targetOptions.tableInfoErrs);
       if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
         llvm::report_fatal_error(llvm::StringRef(targetOptions.tableInfoErrs),
                                  false);

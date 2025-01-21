@@ -16,254 +16,28 @@ mlir::LogicalResult getCost(mlir::Operation *rootOp,
   return TypeSwitch<Operation *, LogicalResult>(rootOp)
       // only handle matmul transpose operations for now
       .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
+        std::stringstream ss;
         llvm::ArrayRef<int64_t> tiles = llvm::ArrayRef<int64_t>(tileSizes);
         llvm::ArrayRef<int64_t> loopInterchange =
             llvm::ArrayRef<int64_t>(interchange);
-        const auto &dims = op.createFlatListOfOperandStaticDims();
-
-        if (dims.size() != 6 || (dims[0] != 1)) {
-          std::stringstream ss;
-          ss << "\nMyrtle: Only supporting 1D vector - 2D matrix transpose "
-                "operations "
-                "at "
-                "the moment.\n";
-          errs = ss.str();
-          return failure();
-        }
-
-        // debugging
-        std::stringstream ss;
-        ss << "Dims:[";
-        for (const auto &dim : dims) {
-          ss << " " << dim;
-          out.push_back(dim);
-        }
-        ss << " ]\n";
-
-        // print per operand!
-        ss << "\n Input Operands...\n";
-        const auto &inputs = op.getRegionInputArgs();
-        for (const auto &arg : inputs) {
-          mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-          const auto &shape = op.getShape(operand);
-          ss << "\noperand # " << operand->getOperandNumber()
-             << " with shape:[ ";
-          for (const auto &num : shape) {
-            ss << num << " ";
-          }
-          ss << " ]\n";
-          // now print its map!!
-          const auto &map = op.getMatchingIndexingMap(operand);
-          std::string os = "";
-          llvm::raw_string_ostream ros = llvm::raw_string_ostream(os);
-          map.print(ros);
-          ros << "\n";
-          ros << "... which applied to tile sizes is ";
-          const auto &relevantSizes = applyPermutationMap(map, tiles);
-          ros << "[ ";
-          for (const auto &sz : relevantSizes) {
-            ros << sz << " ";
-          }
-          ros << " ]\n";
-          ss << ros.str();
-
-          // now apply tile sizes to the map??? Is it possible??
-          // template <typename T> SmallVector<T> applyPermutationMap(AffineMap
-          // map, llvm::ArrayRef<T> source)
-          //    ArrayRef (const SmallVectorTemplateCommon< U *, DummyT > &Vec,
-          //    std::enable_if_t< std::is_convertible< U *const *, T const *
-          //    >::value > *=nullptr)
-          // Construct an ArrayRef<const T*> from a SmallVector<T*>.
-        }
-
-        ss << "\n Output Operands...\n";
-        const auto &outputs = op.getRegionOutputArgs();
-        for (const auto &arg : outputs) {
-          mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-          const auto &shape = op.getShape(operand);
-          ss << "\noperand # " << operand->getOperandNumber()
-             << " with shape:[ ";
-          for (const auto &num : shape) {
-            ss << num << " ";
-          }
-          ss << " ]\n";
-          // now print its map!!
-          const auto &map = op.getMatchingIndexingMap(operand);
-          std::string os = "";
-          llvm::raw_string_ostream ros = llvm::raw_string_ostream(os);
-          map.print(ros);
-          ros << "\n";
-          ros << "... which applied to tile sizes is ";
-          const auto &relevantSizes = applyPermutationMap(map, tiles);
-          ros << "[ ";
-          for (const auto &sz : relevantSizes) {
-            ros << sz << " ";
-          }
-          ros << " ]\n";
-          ss << ros.str();
-        }
-
-        ss << "\nIn what order do we tile the dimensions? *********** v\n";
-        // AffineMap mlir::linalg::LinalgOp::getShapesToLoopsMap()
-        std::string os = "";
-        llvm::raw_string_ostream ros = llvm::raw_string_ostream(os);
-        ros << "shapesToLoopsMap: ";
-        op.getShapesToLoopsMap().print(ros);
-        ros << "\nloopsToShapeMap: ";
-        op.getLoopsToShapesMap().print(ros);
-        ros << "\n... which applied to tile sizes is ";
-        const auto &relevantSizes =
-            applyPermutationMap(op.getLoopsToShapesMap(), tiles);
-        ros << "[ ";
-        for (const auto &sz : relevantSizes) {
-          ros << sz << " ";
-        }
-        ros << " ]\n";
-
-        ss << ros.str() << "\n hoodle \n";
-
-        // bool isFunctionOfDim
-        /// Extracts the first result position where `input` dimension resides.
-        /// Returns `std::nullopt` if `input` is not a dimension expression or
-        /// cannot be found in results.
-        // std::optional<unsigned> getResultPosition(AffineExpr input) const;
-        //  std::optional<unsigned> getResultPosition(AffineExpr input) const;
-        // getAffineDimExpr(dimPos, idxMap.getContext())))
-
-        for (const auto &order : interchange) {
-          for (const auto &arg : inputs) {
-            mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-            const auto &map = op.getMatchingIndexingMap(operand);
-            // if (map.isFunctionOfDim(order)) {
-            //   ss << "operand # " << operand->getOperandNumber()
-            //      << " DOES contain dimension " << order << " in its
-            //      results.\n";
-            // }
-            const auto &res = map.getResultPosition(
-                getAffineDimExpr(order, map.getContext()));
-            if (res != std::nullopt) {
-              ss << "operand # " << operand->getOperandNumber()
-                 << " DOES contain dimension " << order
-                 << " in its results: position " << *res << "\n";
-            }
-          }
-          for (const auto &arg : outputs) {
-            mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-            const auto &map = op.getMatchingIndexingMap(operand);
-            const auto &res = map.getResultPosition(
-                getAffineDimExpr(order, map.getContext()));
-            if (res != std::nullopt) {
-              ss << "operand # " << operand->getOperandNumber()
-                 << " DOES contain dimension " << order
-                 << " in its results: position " << *res << "\n";
-            }
-            // if (map.isFunctionOfDim(order)) {
-            //   ss << "operand # " << operand->getOperandNumber()
-            //      << " DOES contain dimension " << order << " in its
-            //      results."<<"\n";
-            // }
-          }
-        }
-        // mymap.insert ( std::pair<char,int>('a',100) );
-        //  std::map<mlir::Value*,myrtle::OperandTileInfo> val2OpMap = {};
-        //  for(const auto& arg : inputs){
-        //      mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-        //      val2OpMap.insert(std::pair<mlir::Value*,myrtle::OperandTileInfo>(&operand->get(),OperandTileInfo(operand)));
-        //  }
-        //  for(const auto& output : outputs){
-        //      mlir::OpOperand *const operand =
-        //      op.getMatchingOpOperand(output);
-        //      val2OpMap.insert(std::pair<mlir::Value*,myrtle::OperandTileInfo>(&operand->get(),OperandTileInfo(operand)));
-        //  }
-        ss << "\nIn what order do we tile the dimensions? *********** ^\n";
-
-        // not going to touch what works
-        ss << "\nIn what order do we tile the dimensions?\n";
-        for (const auto &order : interchange) {
-          //    ss << "we tile with size " << tileSizes[order] << "\n";
-          // AffineMap mlir::linalg::LinalgOp::getLoopsToShapesMap()
-          ss << "we tile dimension # " << order << "...\n";
-          llvm::SmallVector<std::pair<Value, unsigned>> operandDimPairs =
-              llvm::SmallVector<std::pair<Value, unsigned>>(0);
-          op.mapIterationSpaceDimToAllOperandDims(order, operandDimPairs);
-          for (const auto &pear : operandDimPairs) {
-            // const auto &shape = op.getShape(pear.first);
-            Value firstOperand = pear.first;
-            unsigned firstOperandDim = pear.second;
-            // Trivial case: `dim` size is available in the operand type.
-            // int64_t dimSize = llvm::cast<ShapedType>(firstOperand.getType())
-            //                       .getShape()[firstOperandDim];
-            // if (ShapedType::isDynamic(dimSize)) {
-            //   ss << "\ndimension of operand is dynamic. we cannot handle this
-            //   "
-            //         "right now\n";
-            //   errs = ss.str();
-            //   return failure();
-            // }
-            // ss << "which means we tile operand # _'s" << firstOperandDim
-            //    << "'s dimension with cardinality " << dimSize << "\n";
-
-            const auto &inputs = op.getRegionInputArgs();
-            for (const auto &arg : inputs) {
-              mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-
-              if (operand->is(firstOperand)) {
-                int64_t dimSize = llvm::cast<ShapedType>(firstOperand.getType())
-                                      .getShape()[firstOperandDim];
-                if (ShapedType::isDynamic(dimSize)) {
-                  ss << "\ndimension of operand is dynamic. we cannot handle "
-                        "this "
-                        "right now\n";
-                  errs = ss.str();
-                  return failure();
-                }
-
-                ss << "which is to say tile operand # "
-                   << operand->getOperandNumber()
-                   << "'s dimension with cardinality " << dimSize
-                   << " by tile size " << tileSizes[order] << "\n";
-              }
-            }
-            const auto &outputs = op.getRegionOutputArgs();
-            for (const auto &arg : outputs) {
-              mlir::OpOperand *const operand = op.getMatchingOpOperand(arg);
-
-              if (operand->is(firstOperand)) {
-                int64_t dimSize = llvm::cast<ShapedType>(firstOperand.getType())
-                                      .getShape()[firstOperandDim];
-                if (ShapedType::isDynamic(dimSize)) {
-                  ss << "\ndimension of operand is dynamic. we cannot handle "
-                        "this "
-                        "right now\n";
-                  errs = ss.str();
-                  return failure();
-                }
-
-                ss << "which is to say tile operand # "
-                   << operand->getOperandNumber()
-                   << "'s dimension with cardinality " << dimSize
-                   << " by tile size " << tileSizes[order] << "\n";
-              }
-            }
-          }
-          // void mapIterationSpaceDimToAllOperandDims(unsigned dimPos,
-          // mlir::SmallVectorImpl<std::pair<Value, unsigned>>&
-          // operandDimPairs); find all operands defined on this dimension
-
-          //   void mapIterationSpaceDimToAllOperandDims(unsigned dimPos,
-          // mlir::SmallVectorImpl<std::pair<Value, unsigned>>&
-          // operandDimPairs); which means we tile operand __'s dimension __:
-          // tileSizeIndex++;
-        }
 
         llvm::SmallVector<OperandTileInfo> operands = {};
         std::string errStr = "";
-        if (!tileLoopByLoop(op, tiles, loopInterchange, operands, errStr)) {
+        if (!gatherInfoLoopByLoop(op, tiles, loopInterchange, operands, errStr)) {
           errs = errStr;
           return failure();
         }
+        for(auto& oper : operands){
+            oper.computeValues(errStr);
+            ss << errStr;
+        }
+        out.push_back(operands[1].cycles);
 
-        // errs = ss.str();
+        // extremely snitch-specific cost model calculations now
+        // get cycle count from second argument
+        // get # of L1 to RF transfers per core???
+
+        errs = ss.str();
         // errs = errStr;
         // return failure();
 
@@ -286,83 +60,168 @@ void printSmallVector(llvm::SmallVector<int64_t> v, std::stringstream &ss) {
   ss << "]";
 }
 
+void myrtle::OperandTileInfo::tileLoopByLoop(
+    mlir::linalg::LinalgOp &op, llvm::ArrayRef<int64_t> &tileSizes,
+    llvm::ArrayRef<int64_t> &interchange, MEMSPACE innermostLoopMemspace) {
+  const auto &map = op.getMatchingIndexingMap(operand);
+  const auto &originalShape = op.getShape(operand);
+  for (const auto &order : interchange) {
+    // Set default tile size and tile count.
+    // If this is the first dimension to be tiled,
+    // set tile shape to original operand size.
+    // Otherwise, use most recent tile size.
+    myrtle::LoopTileInfo info(
+        order, 1, L3,
+        (loops.empty() ? originalShape : loops[loops.size() - 1].tileShape));
+    if (tileSizes[order] != 0) { // check that the tile size is valid
+      // check that this operand can indeed be tiled in this dimension
+      const auto &res =
+          map.getResultPosition(getAffineDimExpr(order, map.getContext()));
+      if ((res != std::nullopt)) {
+        // TODO: handle padding!!!
+        info.tileCount = info.tileShape[*res] / tileSizes[order];
+        info.tileShape[*res] = tileSizes[order];
+      }
+    }
+    loops.push_back(info);
+  }
+  loops[loops.size() - 1].mem = innermostLoopMemspace;
+}
+
+void myrtle::OperandTileInfo::tileOneLoopMore(mlir::linalg::LinalgOp &op,
+                                              int64_t loopBound, int64_t dim,
+                                              MEMSPACE memspace) {
+  const auto &map = op.getMatchingIndexingMap(operand);
+  const auto &originalShape = op.getShape(operand);
+  // If this is the first dimension to be tiled,
+  // set tile shape to original operand size.
+  // Otherwise, use most recent tile size.
+  myrtle::LoopTileInfo info(
+      dim, 1, memspace,
+      (loops.empty() ? originalShape : loops[loops.size() - 1].tileShape));
+  // if bound is not valid, return
+  if (loopBound <= 0) {
+    return;
+  }
+  // check that this operand can indeed be tiled in this dimension
+  const auto &res =
+      map.getResultPosition(getAffineDimExpr(dim, map.getContext()));
+  if ((res != std::nullopt)) {
+    // TODO: handle padding!!!
+    info.tileCount = loopBound;
+    info.tileShape[*res] = info.tileShape[*res] / loopBound;
+  }
+
+  loops.push_back(info);
+}
+
+
+void myrtle::OperandTileInfo::computeValues(std::string& errs){
+    // compute cycles
+    int64_t cost_of_fmadd = 3;
+    size_t row_dim_index = 0;
+    size_t reduction_dim_index = 1;
+    std::stringstream ss;
+    int64_t tileCountProd = 1;
+    for(const auto& info : loops){
+        tileCountProd *= info.tileCount;
+    }
+    const auto& innerMost = loops[loops.size()-1];
+    ss << "Compute Cycles:\n";
+    ss << "\tRow dim: " << innerMost.tileShape[row_dim_index] << " elts\n";
+    ss << "\tCol (reduction) dim: " << innerMost.tileShape[reduction_dim_index] << " elts\n";
+    int64_t fmaddCountPerCore = innerMost.tileShape[row_dim_index] * innerMost.tileShape[reduction_dim_index];
+    int64_t cycleCountPerCore = fmaddCountPerCore * cost_of_fmadd;
+    cycles = tileCountProd * cycleCountPerCore;
+    ss << "\tfmaddCountPerCore = " << fmaddCountPerCore << " \n";
+    ss << "\tcycleCountPerCore = " << cycleCountPerCore << " \n";
+    ss << "\tcycles = "<< tileCountProd  << " * " << cycleCountPerCore << " = "<<cycles << "\n\n";
+    errs = ss.str();
+}
+
 // assumes the linalg operation is a matmul_transpose_b
 // "tiles" the operands one dimension at a time,
 // saving tile sizes and tile counts for each dimension
 // as well as the Memory Space where each tile should be located
-bool tileLoopByLoop(mlir::linalg::LinalgOp &op,
+bool gatherInfoLoopByLoop(mlir::linalg::LinalgOp &op,
                     llvm::ArrayRef<int64_t> &tileSizes,
                     llvm::ArrayRef<int64_t> &interchange,
                     llvm::SmallVector<OperandTileInfo> &out,
                     std::string &errs) {
   std::stringstream ss; // for error logging
+  // TODO: get rid of hardcoding!!!
+  // could make it a little more generic by saying "the non-reduction dimension
+  // of the second arg of matmultranspose"
+  int64_t rowDimension = 1;
+  int64_t numCores = 8;
+
   const auto &inputs = op.getRegionInputArgs();
-  // const auto &outputs = op.getRegionOutputArgs();
   //  for each input operand
   for (const auto &arg : inputs) {
     OperandTileInfo oper = OperandTileInfo(op.getMatchingOpOperand(arg));
-    const auto &map = op.getMatchingIndexingMap(oper.operand);
-    // for each dimension (in order of interchange array!)
-    for (const auto &order : interchange) {
-      // Set default tile size and tile count.
-      // If this is the first dimension to be tiled, 
-      // set tile shape to original operand size.
-      // Otherwise, use most recent tile size.
-      myrtle::LoopTileInfo info(
-          order, 1, L3,
-          (oper.loops.empty() ? op.getShape(oper.operand)
-                              : oper.loops[oper.loops.size() - 1].tileShape));
-      if (tileSizes[order] != 0) { // check that the tile size is valid
-        // check that this operand can indeed be tiled in this dimension
-        const auto &res =
-            map.getResultPosition(getAffineDimExpr(order, map.getContext()));
-        if ((res != std::nullopt)) {
-          // TODO: handle padding!!!
-          info.tileCount = info.tileShape[*res] / tileSizes[order];
-          info.tileShape[*res] = tileSizes[order];
-        }
-      }
-      oper.loops.push_back(info);
-    }
+    // tile to fit in L1
+    oper.tileLoopByLoop(op, tileSizes, interchange, L1);
+    // tile for compute cores
+    oper.tileOneLoopMore(op, numCores, rowDimension, L1);
     out.push_back(oper);
     ss << "\n" << oper;
   }
+  const auto &outputs = op.getRegionOutputArgs();
   // for each output operand
-  //   for (const auto &arg : outputs) {
-  //   }
-    errs = ss.str();
-    return false;
-  // now perform thread level tiling (row dimension gets divided by 8)
-  //return true;
+  for (const auto &arg : outputs) {
+    OperandTileInfo oper = OperandTileInfo(op.getMatchingOpOperand(arg));
+    // tile to fit in L1
+    oper.tileLoopByLoop(op, tileSizes, interchange, L1);
+    // tile for compute cores
+    oper.tileOneLoopMore(op, numCores, rowDimension, L1);
+    out.push_back(oper);
+    ss << "\n" << oper;
+  }
+  errs = ss.str();
+  return true;
 }
 
-std::ostream& operator<<(std::ostream& os, const LoopTileInfo& lti){
-    os << "LoopTileInfo:\n";
-    os << "\t dim: " << lti.dim << "\n";
-    os << "\t tile shape: [ ";
-    for(const auto& sz : lti.tileShape){
-        os << sz << " ";
-    }
-    os << "]\n";
-    os << "\t tile count: " << lti.tileCount << "\n";
-    os << "\t mem: " << ((lti.mem == L1) ? "L1" : "L3" )<< "\n";
-    return os;
+std::ostream &operator<<(std::ostream &os, const LoopTileInfo &lti) {
+  os << "LoopTileInfo:\n";
+  os << "\t dim: " << lti.dim << "\n";
+  os << "\t tile shape: [ ";
+  for (const auto &sz : lti.tileShape) {
+    os << sz << " ";
+  }
+  os << "]\n";
+  os << "\t tile count: " << lti.tileCount << "\n";
+  os << "\t mem: " << ((lti.mem == L1) ? "L1" : "L3") << "\n";
+  return os;
 }
-std::ostream& operator<<(std::ostream& os, const OperandTileInfo& oti){
-     os << "OperandTileInfo:\n";
-     os << "\tLoops:[ ";
-     for(const auto& loop : oti.loops){
-        os << "\n\t " << loop;
-
-
-     }
-     os << "\t]\n";
-    return os;
+std::ostream &operator<<(std::ostream &os, const OperandTileInfo &oti) {
+  os << "OperandTileInfo:\n";
+  os << "\tLoops:[ ";
+  for (const auto &loop : oti.loops) {
+    os << "\n\t " << loop;
+  }
+  os << "\t]\n";
+  return os;
 }
 
 }; // namespace myrtle
 
 /* Notes
+
+
+ SmallVector<unsigned> parallelDims = {};
+ SmallVector<unsigned> reductionDims = {};
+ op.getParallelDims(parallelDims);
+ op.getReductionDims(reductionDims);
+ss << "number of parallel loops is " << op.getNumParallelLoops() << "\n";
+for(const auto& dim : parallelDims){
+    ss << "parallel dim " << dim << "\n";
+
+}
+ss << "number of reduction loops is " << op.getNumReductionLoops() << "\n";
+for(const auto& dim : reductionDims){
+    ss << "reduction dim " << dim << "\n";
+
+}
 
    // /// Return the input block arguments of the region.
         // Block::BlockArgListType getRegionInputArgs();

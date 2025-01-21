@@ -58,8 +58,10 @@ bool parseListOfInts(llvm::json::Object *obj,
 bool parseBool(llvm::json::Object *obj,
                                          std::string listName,
                                           bool& out, std::string& errs);
-
+TileInfoTbl* exportTileInfoTable(TileInfoTbl* tbl, const std::string& filePath, std::string& errs);
 /*
+llvm::json::Value::Value 	( 	const std::map< std::string, Elt > &  	C	) 	
+
 hashtable from string --> tilingScheme object
 tileConfig Object supports
 - printing itself out
