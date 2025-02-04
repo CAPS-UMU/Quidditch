@@ -57,6 +57,8 @@ def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionO
            "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
     Option<"exportUntiled", "export-untiled", "std::string", /*default=*/"",
            "Name of a JSON file to which we export untiled linalg operations.">,
+    Option<"exportCosts", "export-costs", "std::string", /*default=*/"",
+           "Name of a JSON file to which we export cost of each tiled linalg operation.">,
     Option<"tablePointer", "TODORemoveThisOption", "std::uintptr_t", /*default=*/"0",
            "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
   ];

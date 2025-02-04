@@ -1,8 +1,8 @@
 #include "Passes.h"
 
+#include "Myrtle.h"
 #include "Quidditch/Dialect/Snitch/IR/QuidditchSnitchAttrs.h"
 #include "TilingScheme.h"
-#include "Myrtle.h"
 #include "iree/compiler/Codegen/Dialect/Codegen/IR/IREECodegenAttrs.h"
 #include "iree/compiler/Codegen/Utils/CPUUtils.h"
 #include "iree/compiler/Codegen/Utils/Utils.h"
@@ -85,7 +85,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //   only applicable once on Occamy.
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
-        SmallVector<int64_t> l1Interchange = {1,1,1};//{2, 0, 1};
+        SmallVector<int64_t> l1Interchange = {1, 1, 1}; //{2, 0, 1};
         bool dualBuffer = true;
         SmallVector<int64_t> myrtleCost = {};
 
@@ -110,8 +110,8 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //     ss << val // string's value
         //        << std::endl;
         //   }
-        //   funcOp.emitWarning() << "\nThis is what we read in!!\n" << ss.str() << "\n";
-        //   return failure();
+        //   funcOp.emitWarning() << "\nThis is what we read in!!\n" << ss.str()
+        //   << "\n"; return failure();
         // }
 
         //     if (auto search = example.find(2); search != example.end())
@@ -146,7 +146,6 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //   //funcOp.emitWarning() << ss.str();
         // }else{
         //   funcOp.emitWarning() << "\ncasper set root config \n";
-
         // }
 
         if (!ts.getTiles_flat(l1Tiles)) {
@@ -163,17 +162,22 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         std::string myErrs;
 
-        if(failed(myrtle::getCost(rootOp,l1Tiles, l1Interchange, myrtleCost, myErrs))){
-          //funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+        if (failed(myrtle::getCost(rootOp, l1Tiles, l1Interchange, myrtleCost,
+                                   myErrs))) {
+          funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
           return failure();
-        }else{
-          //funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-
+        } else {
+          ts.setMyrtleCost(myrtleCost);
+          // if (funcOp.getName() ==
+          //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+          //   funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+          // }
         }
 
-        setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
-                                      rootOp->getContext(), workgroupTiles,
-                                      l1Tiles, l1Interchange, dualBuffer, myrtleCost));
+        setLoweringConfig(rootOp,
+                          quidditch::Snitch::LoweringConfigAttr::get(
+                              rootOp->getContext(), workgroupTiles, l1Tiles,
+                              l1Interchange, dualBuffer, myrtleCost));
         return success();
       })
       .Default(success());
@@ -195,9 +199,9 @@ void ConfigureTiles::runOnOperation() {
   }
 
   // TODO: un-comment out check for translationInfo, instead of blindly
-  // overwriting it. 
+  // overwriting it.
   if (getTranslationInfo(funcOp))
-     return;
+    return;
 
   SmallVector<Operation *> computeOps = getComputeOps(funcOp);
   FailureOr<Operation *> rootOp = getRootOperation(computeOps);
@@ -221,24 +225,25 @@ void ConfigureTiles::runOnOperation() {
   }
 
   // TODO: un-comment out check for lowering config, instead of blindly
-  // overwriting it. 
+  // overwriting it.
   auto loweringConfig =
-  getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
-  if (!loweringConfig){
+      getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
+  if (!loweringConfig) {
 
-  if (failed(setRootConfig(funcOp, rootOperation, tbl))) {
-    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star set root config failed\n";
-    return signalPassFailure();
+    if (failed(setRootConfig(funcOp, rootOperation, tbl))) {
+      funcOp.emitWarning()
+          << "\nPEPPERMINT: cheesey star set root config failed\n";
+      return signalPassFailure();
+    }
   }
-
-   }
 
   // The root configuration setting introduces `tensor.dim` operations.
   // Resolve those away.
   RewritePatternSet patterns(funcOp.getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
-    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star apply patterns and fold greedily failed\n";
+    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star apply patterns and "
+                            "fold greedily failed\n";
     signalPassFailure();
   }
 }

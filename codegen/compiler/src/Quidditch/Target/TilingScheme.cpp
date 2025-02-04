@@ -15,7 +15,7 @@ TileInfoTbl *fillTileInfoTable(TileInfoTbl *tbl, const std::string &filePath,
   if (!ifs.is_open()) {
     std::stringstream ss;
     ss << "\nTiling Scheme File does not exist or cannot be opened.\n"
-       << "Troublesome file path is " << filePath << "\n";
+       << "Troublesome file path is " << filePath<< "\n";
     errs = ss.str();
     return 0;
   }
@@ -41,88 +41,46 @@ TileInfoTbl *exportTileInfoTable(TileInfoTbl *tbl, const std::string &filePath,
     return 0;
   }
   TileInfoTbl *result = tbl;
-  std::stringstream outputFilePath;
-  outputFilePath << filePath << "-exported.json";
   // try to open file
-  std::ofstream ofs(outputFilePath.str(), std::ofstream::out);
+  std::ofstream ofs(filePath, std::ofstream::out);
   if (!ofs.is_open()) {
     std::stringstream ss;
     ss << "\nTiling Scheme File does not exist or cannot be opened.\n"
-       << "Troublesome file path is " << outputFilePath.str() << "\n";
+       << "Troublesome file path is " << filePath << "\n";
     errs = ss.str();
     return 0;
   }
-  ofs << "yodelayheehoooooo~~~~~!\n";
-  // std::pair< iterator, bool > 	insert (KV E)
 
-  // ofs << tester;
-  // llvm::json::Value::Value 	( 	const std::map< std::string, Elt > & C
-  // ) llvm::json::Value::Value 	( 	const llvm::SmallVectorImpl<
-  // char > &  	V	) std::vector<int> myrtleCost;
-  //  std::map< std::string, llvm::json::Value> costMap = {};
   std::map<std::string, int> costMap = {};
-  // try to write to file
-  /*
-  struct Object::KV {
-  ObjectKey K;
-  Value V;
-};
-  llvm::json::Value toJSON(const Position &P) {
-  return llvm::json::Object{
-      {"line", P.line},
-      {"character", P.character},
-  };
-}
-  */
+
   for (const auto &pear : *tbl) {
-    ofs << pear.first << "\n";
-    costMap.insert(std::pair<std::string, int>(pear.first, 7));
+    ofs << pear.first << " : ";// << "\n";
+    if(pear.second.myrtleCost.size() > 0){
+      ofs << pear.second.myrtleCost[0];
+    }
+    ofs << "\n\n";
+   // costMap.insert(std::pair<std::string, int>(pear.first, pear.second.myrtleCost[0]));
   }
   // auto hoodle = llvm::json::Object(costMap);
   // auto costMapAsJson = llvm::json::Value({{"hoodle","yodel"},{"yohoho, 5"}});
-  std::string blank = "";
-  llvm::raw_string_ostream ros = llvm::raw_string_ostream(blank);
-  //ros << llvm::json::toJSON(costMap);
-  // auto tester = llvm::json::Object();
-  // tester.insert({"name",5});
-  // ros << tester;//llvm::json::Value(tester);
-  // ofs << ros.str();
-  llvm::json::OStream J(ros);
-    J.array([&] {
-    for (const auto &pear : *tbl)
-      J.object([&] {
-        J.attribute(pear.first, int64_t(4));
-        J.attributeArray("myrtleCost", [&] {
-          for (int64_t cost : pear.second.myrtleCost)
-            J.value(cost);
-        });
-      });
-  });
-   ofs << ros.str();
-  /*
-  J.array([&] {
-    for (const Event &E : Events)
-      J.object([&] {
-        J.attribute("timestamp", int64_t(E.Time));
-        J.attributeArray("participants", [&] {
-          for (const Participant &P : E.Participants)
-            J.value(P.toString());
-        });
-      });
-  });
-  */
- // [ { "timestamp": 19287398741, "participants": [ "King Kong", "Miley Cyrus", "Cleopatra" ] }, ... ]
-  // std::stringstream ss;
-  // ss << ifs.rdbuf();
-  // if (ss.str().length() == 0) {
-  //   errs = "\nTiling Scheme file cannot have content length of 0\n";
-  //   ifs.close();
-  //   return 0;
-  // }
-  // // try to parse list of schemes
-  // if (!parseTilingSchemes(tbl, StringRef(ss.str()), errs)) {
-  //   result = 0;
-  // }
+  
+  
+  // std::string blank = "";
+  // llvm::raw_string_ostream ros = llvm::raw_string_ostream(blank);
+
+  // llvm::json::OStream J(ros);
+  //   J.array([&] {
+  //   for (const auto &pear : *tbl)
+  //     J.object([&] {
+  //       J.attribute(pear.first, int64_t(4));
+  //       J.attributeArray("myrtleCost", [&] {
+  //         for (int64_t cost : pear.second.myrtleCost)
+  //           J.value(cost);
+  //       });
+  //     });
+  // });
+  //  ofs << ros.str();
+
   ofs.close();
   return result;
 }
@@ -286,15 +244,14 @@ bool parseBool(llvm::json::Object *obj, std::string boolName, bool &out,
 //   return true;
 // }
 
-bool TilingScheme::getMyrtleCost(llvm::SmallVector<int64_t> &out) {
-  if (out.size() != myrtleCost.size()) {
-    return false;
-  } else {
-    for (size_t i = 0; i < tiles.size(); i++) {
-      out[i] = (int64_t)myrtleCost[i];
+void TilingScheme::setMyrtleCost(llvm::SmallVector<int64_t> &in) {
+  myrtleCost.clear();
+  
+    for (size_t i = 0; i < in.size(); i++) {
+      myrtleCost.push_back(in[i]);
     }
-  }
-  return true;
+  
+  
 }
 
 bool TilingScheme::getTiles_flat(llvm::SmallVector<int64_t> &out) {
@@ -355,3 +312,35 @@ std::stringstream &operator<<(std::stringstream &ss,
 }
 
 } // namespace quidditch
+
+
+  /*
+  J.array([&] {
+    for (const Event &E : Events)
+      J.object([&] {
+        J.attribute("timestamp", int64_t(E.Time));
+        J.attributeArray("participants", [&] {
+          for (const Participant &P : E.Participants)
+            J.value(P.toString());
+        });
+      });
+  });
+  */
+ // [ { "timestamp": 19287398741, "participants": [ "King Kong", "Miley Cyrus", "Cleopatra" ] }, ... ]
+  // std::stringstream ss;
+  // ss << ifs.rdbuf();
+  // if (ss.str().length() == 0) {
+  //   errs = "\nTiling Scheme file cannot have content length of 0\n";
+  //   ifs.close();
+  //   return 0;
+  // }
+  // // try to parse list of schemes
+  // if (!parseTilingSchemes(tbl, StringRef(ss.str()), errs)) {
+  //   result = 0;
+  // }
+    //ros << llvm::json::toJSON(costMap);
+  // auto tester = llvm::json::Object();
+  // tester.insert({"name",5});
+  // ros << tester;//llvm::json::Value(tester);
+  // ofs << ros.str();
+  // SmallVector<int64_t> myrtleCost = {};

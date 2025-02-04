@@ -193,12 +193,7 @@ applyTileAndFuseToEachRoot(RewriterBase &rewriter,
       for (OpResult res : toReplace->getResults())
         if (auto replacement = tiledResults->replacements.lookup(res)) {
           Operation *replacementOp = replacement.getDefiningOp();
-          //     if(rewriter.getInsertionBlock()->getParentOp()->getName() ==
-          //  "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"){
-          //   replacementOp->emitWarning() << "Here is the kernel we care
-          //   about!\n";
 
-          //   }
           // replacementOp->emitWarning() << "we replace with this!\n";
 
           rewriter.replaceUsesWithIf(res, replacement, [&](OpOperand &use) {
@@ -217,6 +212,10 @@ applyTileAndFuseToEachRoot(RewriterBase &rewriter,
 
 void TensorTile::runOnOperation() {
   FunctionOpInterface funcOp = getOperation();
+  // if (funcOp.getName() ==
+  //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+  //   funcOp.emitWarning() << "Here is the kernel we care about !\n ";
+  // }
 
   llvm::SmallDenseSet<TilingInterface> targetOps;
   switch (tilingLevel) {
@@ -236,13 +235,15 @@ void TensorTile::runOnOperation() {
   if (failed(applyTileAndFuseToEachRoot(rewriter, targetOps, tilingLevel)))
     return signalPassFailure();
 
-  if (funcOp.getName() ==
-     "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
-    std::string level =
-        (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" : "L1";
-    funcOp->emitWarning() << "SLICEDCUCUMBER tiling level " << level
-                          << " This is the rewritten kernel!!!!!\n";
-  }
+  // if (funcOp.getName() ==
+  //    "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+  //       if((this->tilingLevel == quidditch::TilingLevel::Thread)){
+  //         funcOp->emitWarning() << "SLICEDCUCUMBER tiling level " << "Thread"
+  //                         << " This is the rewritten kernel!!!!!\n";
+
+  //       }
+    
+  // }
 
   // if(funcOp.getName() ==
   //        "main$async_dispatch_7_matmul_transpose_b_1x600x400_f64"){
@@ -256,7 +257,17 @@ void TensorTile::runOnOperation() {
   // if (funcOp.getName() ==
   //     "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
   //   std::string level =
-  //       (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" : "L1";
+  //       (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" :
+  //       "L1";
+  //   funcOp->emitWarning() << "SLICEDCUCUMBER tiling level " << level
+  //                         << " This is the rewritten kernel!!!!!\n";
+  // }
+
+  // if (funcOp.getName() ==
+  //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+  //   std::string level =
+  //       (this->tilingLevel == quidditch::TilingLevel::Thread) ? "Thread" :
+  //       "L1";
   //   funcOp->emitWarning() << "SLICEDCUCUMBER tiling level " << level
   //                         << " This is the rewritten kernel!!!!!\n";
   // }

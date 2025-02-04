@@ -86,6 +86,7 @@ struct QuidditchTargetOptions {
   bool assertCompiled = false;
   std::string importTilingSchemes = ""; // added for Configure Tiles Pass
   std::string exportUntiled = "";       // added for Configure Tiles Pass
+  std::string exportCosts = "";       // added for Configure Tiles Pass
   quidditch::TileInfoTbl tileInfo =
       quidditch::TileInfoTbl(); // added for Configure Tiles Pass
   std::string tableInfoErrs = "FROG ";
@@ -129,6 +130,10 @@ struct QuidditchTargetOptions {
         "iree-quidditch-export-untiled", exportUntiled, llvm::cl::cat(category),
         llvm::cl::desc("Path to a JSON file to which we export untiled linalg "
                        "operations."));
+    binder.opt<std::string>(
+        "iree-quidditch-export-costs", exportCosts, llvm::cl::cat(category),
+        llvm::cl::desc("Path to a JSON file to which we export the cost of "
+                       "each tiled linalg operation"));
     // added for Configure Using ZigZag Pass
     binder.opt<std::string>(
         "iree-quidditch-zigzag-workloads", zigzagWorkloads,
@@ -218,16 +223,18 @@ public:
       quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
           &targetOptions.tileInfo, targetOptions.importTilingSchemes,
           targetOptions.tableInfoErrs);
-          quidditch::TileInfoTbl * tablePointer2 = quidditch::exportTileInfoTable(
-          &targetOptions.tileInfo, targetOptions.importTilingSchemes,
-          targetOptions.tableInfoErrs);
       if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
         llvm::report_fatal_error(llvm::StringRef(targetOptions.tableInfoErrs),
                                  false);
       }
-      return quidditch::createConfigureTiles({targetOptions.importTilingSchemes,
+      auto thePass = quidditch::createConfigureTiles({targetOptions.importTilingSchemes,
                                               targetOptions.exportUntiled,
+                                              targetOptions.exportCosts,
                                               (std::uintptr_t)tablePointer});
+      quidditch::TileInfoTbl * tablePointer2 = quidditch::exportTileInfoTable(
+          &targetOptions.tileInfo, targetOptions.exportCosts,
+          targetOptions.tableInfoErrs);
+      return thePass;
     });
   }
 

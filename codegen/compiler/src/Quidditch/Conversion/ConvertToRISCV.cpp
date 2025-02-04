@@ -145,6 +145,7 @@ ConvertToRISCV::convertToRISCVAssembly(MemRefMicrokernelOp kernelOp,
 void ConvertToRISCV::runOnOperation() {
   ModuleOp module = getOperation();
   SymbolTable symbolTable(module);
+ // module.emitWarning() << "Trying to see if my snitch instruction survived! TURKEY\n";
 
   std::size_t kernelIndex = 0;
   module.walk([&](MemRefMicrokernelOp kernelOp) {

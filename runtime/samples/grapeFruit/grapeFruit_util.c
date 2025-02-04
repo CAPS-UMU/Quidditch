@@ -18,6 +18,8 @@ inline uint32_t snrt_mcycle() {
   return r;
 }
 
+extern unsigned long myrtle_actual_cycles[5][2];
+
 
 int run_grapeFruit_experiment(
     iree_hal_executable_library_query_fn_t implementation) {
@@ -52,10 +54,25 @@ int run_grapeFruit_experiment(
   IREE_CHECK_OK(run_model(&config));
   unsigned long cycles_after = snrt_mcycle();
 
-  for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
-    double value = (*data)[i];
-    printf("%f\n", value);
-  }
+  // for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
+  //   double value = (*data)[i];
+  //   printf("%f\n", value);
+  // }
+
+  // for(int i = 0; i < 5; i ++){
+  //   printf("%d: %lu - %lu = %lu\n", i, myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]);     
+  // }
+   int i = 0;
+  printf("dispatch 9: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
+  i = 1;
+  printf("dispatch 0: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
+  i = 2;
+  printf("dispatch 7: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
+  i = 3;
+  printf("dispatch 8: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
+  i = 4;
+  printf("dispatch 1: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
+  
 
   printf("\ncycles %lu\n", cycles_after - cycles);
   free(data);

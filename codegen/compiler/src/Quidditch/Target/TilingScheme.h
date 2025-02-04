@@ -37,7 +37,7 @@ struct TilingScheme {
   std::string str();
   bool getTiles_flat( llvm::SmallVector<int64_t>& out);
   bool getOrder_flat( llvm::SmallVector<int64_t>& out);
-  bool getMyrtleCost( llvm::SmallVector<int64_t>& out);
+  void setMyrtleCost( llvm::SmallVector<int64_t>& in);
   bool getDualBuffer(){return dualBuffer;}
   // overloaded output operator
   friend std::stringstream &operator<<(std::stringstream &ss,

@@ -82,6 +82,7 @@ endmacro()
 
 test_executable(HelloWorld PRECOMMIT)
 test_executable(vec_multiply PRECOMMIT)
+test_executable(caqui PRECOMMIT)
 test_executable(pomelo PRECOMMIT)
 test_executable(calabaza PRECOMMIT)
 test_executable(GrapeFruit NIGHTLY)

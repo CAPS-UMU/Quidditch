@@ -23,8 +23,9 @@ mlir::LogicalResult getCost(mlir::Operation *rootOp,
 
         llvm::SmallVector<OperandTileInfo> operands = {};
         std::string errStr = "";
-        if (!gatherInfoLoopByLoop(op, tiles, loopInterchange, operands, errStr)) {
-          errs = errStr;
+        std::string gatherInfoStr = "";
+        if (!gatherInfoLoopByLoop(op, tiles, loopInterchange, operands, gatherInfoStr)) {
+          errs = gatherInfoStr;
           return failure();
         }
         for(auto& oper : operands){
@@ -37,8 +38,9 @@ mlir::LogicalResult getCost(mlir::Operation *rootOp,
         // get cycle count from second argument
         // get # of L1 to RF transfers per core???
 
-        errs = ss.str();
-        // errs = errStr;
+        // errs = ss.str();
+        //  errs = errStr;
+        errs = gatherInfoStr;
         // return failure();
 
         return success();

@@ -1073,7 +1073,7 @@ void ConvertToLLVMPass::runOnOperation() {
                            Snitch::QuidditchSnitchDialect>();
 
   // EMIT IR BEFORE PARTIAL CONVERSION
-    ss.str("");
+    // ss.str("");
     // ss << "\nRADDISH (q-convert-to-llvm) BEFORE applyPartialConversion ...";
     // getOperation()->emitWarning() << ss.str();
     // ss.str("");
@@ -1099,6 +1099,10 @@ void ConvertToLLVMPass::runOnOperation() {
       getOperation()->emitWarning() << ss.str();
       return signalPassFailure();
     }
+    // else{
+    //   ss << "\nRADDISH (q-convert-to-llvm) `Rewrite any extern calls emitted to dynamic library imports` WORKED :D";
+    //   getOperation()->emitWarning() << ss.str();
+    // }
   }
 
   // Post conversion patterns.
@@ -1114,7 +1118,13 @@ void ConvertToLLVMPass::runOnOperation() {
       getOperation()->emitWarning() << ss.str();
       return signalPassFailure();
     }
+    // else{
+    //   ss << "\nRADDISH (q-convert-to-llvm) Post conversion patterns WORKED :D";
+    //   getOperation()->emitWarning() << ss.str();
+    // }
   }
+
+
 }
 
 } // namespace quidditch
