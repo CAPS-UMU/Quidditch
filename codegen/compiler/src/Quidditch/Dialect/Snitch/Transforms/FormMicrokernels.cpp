@@ -51,4 +51,10 @@ void FormMicrokernels::runOnOperation() {
     builder.create<MicrokernelYieldOp>(linalgOp->getLoc(),
                                        linalgOp->getResults());
   });
+
+  // if (func.getName() == // delete later
+  //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+  //   func->emitWarning()
+  //       << "\nFormMicrokernels dump -- This is the rewritten kernel!!!!!\n";
+  // }
 }

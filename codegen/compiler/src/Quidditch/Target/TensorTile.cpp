@@ -238,7 +238,7 @@ void TensorTile::runOnOperation() {
   // if (funcOp.getName() ==
   //    "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
   //       if((this->tilingLevel == quidditch::TilingLevel::Thread)){
-  //         funcOp->emitWarning() << "SLICEDCUCUMBER tiling level " << "Thread"
+  //         funcOp->emitWarning() << "\nSLICEDCUCUMBER tiling level " << "Thread"
   //                         << " This is the rewritten kernel!!!!!\n";
 
   //       }

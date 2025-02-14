@@ -86,7 +86,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
         SmallVector<int64_t> l1Interchange = {1, 1, 1}; //{2, 0, 1};
-        bool dualBuffer = true;
+        bool dualBuffer = false;
         SmallVector<int64_t> myrtleCost = {};
 
         // TODO: Figure out why it is that setting the third l1Tiles element to
@@ -166,12 +166,13 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
                                    myErrs))) {
           funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
           return failure();
-        } else {
+        } 
+        else {
           ts.setMyrtleCost(myrtleCost);
-          // if (funcOp.getName() ==
-          //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
-          //   funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-          // }
+          if (funcOp.getName() ==
+              "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+            funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+          }
         }
 
         setLoweringConfig(rootOp,

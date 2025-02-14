@@ -104,7 +104,7 @@ static void insertMyrtleRecordCycles(FunctionOpInterface function) {
       }
     }
   }
- // find the last operation, and insert record_cycles
+  // find the last operation, and insert record_cycles
   for (FunctionOpInterface::reverse_iterator it = function.rbegin(),
                                              e = function.rend();
        it != e; ++it) {
@@ -121,7 +121,8 @@ static void insertMyrtleRecordCycles(FunctionOpInterface function) {
     break;
   }
   // end of function
- // function.emitWarning("I DID find a dma func to insert timing funcs into!  GRAVY\n");
+  // function.emitWarning("I DID find a dma func to insert timing funcs into!
+  // GRAVY\n");
 }
 
 void SpecializeDMACode::runOnOperation() {
@@ -135,6 +136,13 @@ void SpecializeDMACode::runOnOperation() {
 
     insertBarriers(function);
 
+    //   if (function.getName() == // delete later
+    //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+    //   function->emitWarning()
+    //       << "\nSpecializeDMACode dump -- This is the rewritten
+    //       kernel!!!!!\n";
+    // }
+
     FunctionOpInterface clone = function.clone();
     clone.setName((clone.getName() + "$dma").str());
     // try to insert a call to our new myrtle_record_cycles function
@@ -146,6 +154,14 @@ void SpecializeDMACode::runOnOperation() {
     removeUnsupportedSpecializedOps<ComputeCoreSpecializationOpInterface>(
         function);
     removeUnsupportedSpecializedOps<DMACoreSpecializationOpInterface>(clone);
+
+    // if (function.getName() == // delete later
+    //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+    //   function->emitWarning()
+    //       << "\nAFTER SpecializeDMACode dump -- This is the rewritten kernel!!!!!\n";
+    //   clone->emitWarning()
+    //       << "\nAFTER SpecializeDMACode dump -- This is the cloned DMA thingy!!!!!\n";
+    // }
   }
 }
 

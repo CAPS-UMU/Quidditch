@@ -153,6 +153,7 @@ struct CallMicrokernelOpLowering : ConvertOpToLLVMPattern<CallMicrokernelOp> {
       inputs.push_back(descriptor.bufferPtr(rewriter, op->getLoc(),
                                             *getTypeConverter(), memRefType));
     }
+    //kernelDecl.emitWarning() << "\nTURKEY\nI think this is the kernel lowered to LLVM..."; //delete later
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, kernelDecl, inputs);
     return success();
   }

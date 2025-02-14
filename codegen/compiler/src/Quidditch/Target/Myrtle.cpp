@@ -32,14 +32,28 @@ mlir::LogicalResult getCost(mlir::Operation *rootOp,
             oper.computeValues(errStr);
             ss << errStr;
         }
-        out.push_back(operands[1].cycles);
+
+        out.push_back(operands[1].cycles); // get cycle count of weight matrix operand using fmadd count
+
+        // get # of dispatches from tile count at second to innermost loop
+        size_t hoodle = operands[1].loops.size()-2;
+        if(hoodle < 0){
+          errs = "Error: tiled linalg op has fewer than 2 loops\n";
+          return failure();
+        }
+        const auto& beforeInnerMost = operands[1].loops[hoodle];
+        out.push_back(beforeInnerMost.tileCount);
+
+        // get element count of weight matrix + reduction dimension
+        //int cost = operands[1].loops[operands[1].loops.size()]
+        // out.push_back(operands[1])
 
         // extremely snitch-specific cost model calculations now
         // get cycle count from second argument
         // get # of L1 to RF transfers per core???
 
         // errs = ss.str();
-        //  errs = errStr;
+        // errs = errStr;
         errs = gatherInfoStr;
         // return failure();
 

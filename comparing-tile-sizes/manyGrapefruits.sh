@@ -31,8 +31,8 @@ gen_cmakelists(){
        cat $epilogueFile >> "$2/CMakeLists.txt"
     else
        cat $prologueFile > "$2/CMakeLists.txt"
-       echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-export-costs=$3 --iree-quidditch-import-tiles=$ts)" >> "$2/CMakeLists.txt"
-       echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-export-costs=$3 --iree-quidditch-import-tiles=$ts)" >> "$2/CMakeLists.txt"
+       echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-export-costs=$3 --iree-quidditch-import-tiles=$1)" >> "$2/CMakeLists.txt"
+       echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-export-costs=$3 --iree-quidditch-import-tiles=$1)" >> "$2/CMakeLists.txt"
        cat $epilogueFile >> "$2/CMakeLists.txt"
    fi
 }
@@ -62,8 +62,45 @@ then
         # copy generated executable to local folder
         cp $grapefruitExec "$basename/GrapeFruit" # copy SRC to DST  
         done
+        gen_cmakelists "original" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt
        
 else
+        if [[ "$1" == "actuallyOnlyOne" ]];
+        then 
+            basename=`basename $2 | sed 's/[.][^.]*$//'` # note that $2 ends with .json
+            echo "Compiling with tile sizes $basename ..."
+            rm --f -R $basename # delete previous outputs
+            mkdir -p $basename # create a local folder for this set of tile sizes
+            echo "$basename.json" # inform user we are about to start processing $basename.json
+            exportedCostFile="$here/$basename/tilingCosts.json" # using full path here
+            gen_cmakelists "$here/tile-sizes-to-test/$2" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt
+            gen_cmakelists "$here/tile-sizes-to-test/$2" $basename $exportedCostFile # save a copy of it in our local folder
+            cd $buildDir
+            cmake .. -GNinja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$here/$basename/cmakeOutput.txt"
+            ninja -j 20 &> "$here/$basename/buildOutput.txt"
+            cd $here
+            # copy generated executable to local folder
+            cp $grapefruitExec "$basename/GrapeFruit" # copy SRC to DST
+            gen_cmakelists "original" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt            
+            if [[ "$3" == "noRun" ]];
+            then
+                echo "Finished compiling."
+            else
+                echo "Running $basename ..."
+                myExecutable="$here/$basename/GrapeFruit"
+                cd $verilator
+                rm -f "$here/$basename/logs"
+                ./snitch_cluster.vlt $myExecutable > "$here/$basename/run_output.txt"
+                cp -r logs "$here/$basename/logs"
+                cd $here
+            fi
+        else
+        
        echo "manyGrapefruits: running each tiling option using verilator..."
         for ts in $tileSizes
         do
@@ -76,6 +113,7 @@ else
         cp -r logs "$here/$basename/logs"
         cd $here
         done
+        fi
 fi
 
 #./home/hoppip/Quidditch/toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/build/runtime/samples/grapeFruit/GrapeFruit
