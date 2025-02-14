@@ -58,6 +58,7 @@ then
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$here/$basename/cmakeOutput.txt"
         ninja -j 20 &> "$here/$basename/buildOutput.txt"
+        grep "kernel does not fit into L1 memory and cannot be compiled" "$here/$basename/buildOutput.txt"
         cd $here
         # copy generated executable to local folder
         cp $grapefruitExec "$basename/GrapeFruit" # copy SRC to DST  
@@ -83,6 +84,7 @@ else
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$here/$basename/cmakeOutput.txt"
             ninja -j 20 &> "$here/$basename/buildOutput.txt"
+            grep "kernel does not fit into L1 memory and cannot be compiled" "$here/$basename/buildOutput.txt"
             cd $here
             # copy generated executable to local folder
             cp $grapefruitExec "$basename/GrapeFruit" # copy SRC to DST
