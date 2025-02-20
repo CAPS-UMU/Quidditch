@@ -8,13 +8,27 @@ Cost Model: https://colab.research.google.com/drive/1fR_fq9LLSiY3LONu_zMSaZD2u1i
 
 | Tiling Scheme | NsNet kernel                 | Entire NN      | Inputs to Cost Model                                         | Estimated Cost |
 | ------------- | ---------------------------- | -------------- | ------------------------------------------------------------ | -------------- |
+| [0, 40, 104]  | 133118 cycles                | 1285049 cycles |                                                              |                |
 | [0, 40, 100]  | 89788 cycles                 | 1112529 cycles | repeat = 5, fmadd = 1, fmadd_irr = 4, fld= 5, li = 0, iters=100, scf=1 |                |
+| [0, 40, 96]   | 175653 cycles                | 1453754 cycles |                                                              |                |
 | [0, 96, 40]   | doesn't fit in L1 :frowning: |                |                                                              |                |
 | [0, 80, 40]   | 106194 cycles                | 1176454 cycles | repeat = 5, fmadd = 1, fmadd_irr = 4, fld = 5, li = 10, iters=40, scf=2 |                |
 | [0, 40, 80]   | 107211 cycles                | 1181547 cycles | repeat = 5, fmadd = 1, fmadd_irr = 4, fld= 5, li = 0, iters=80, scf=1 |                |
 | [0, 96, 32]   | 206234 cycles                | 1576329 cycles | repeat=4, fmadd=1, fmadd_irr=3, fld=4, li=8, iters=32, scf=3 |                |
 | [0, 96, 20]   | 152769 cycles                | 1363936 cycles | repeat=4, fmadd=1, fmadd_irr=3, fld=4, li=8, iters=20, scf=3 |                |
 | [0, 24, 120]  | 167284 cycles                | 1419432 cycles | repeat=3, fmadd=1, fmadd_irr=2, fld=3,li=0, iters=120, scf=1 |                |
+
+```
+[0, 40, 104], 133118 cycles, 1285049 cycles
+[0, 40, 100], 89788 cycles,  1112529 cycles
+[0, 40, 96], 175653 cycles,  1453754 cycles
+[0, 80, 40], 106194 cycles,  1176454 cycles
+[0, 40, 80], 107211 cycles,  1181547 cycles
+[0, 96, 32], 206234 cycles,  1576329 cycles
+[0, 96, 20], 152769 cycles,  1363936 cycles
+[0, 24, 120], 167284 cycles, 1419432 cycles
+
+```
 
 
 

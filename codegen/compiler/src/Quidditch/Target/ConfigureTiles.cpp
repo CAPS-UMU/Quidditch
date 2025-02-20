@@ -169,10 +169,11 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         } 
         else {
           ts.setMyrtleCost(myrtleCost);
-          if (funcOp.getName() ==
-              "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
-            funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-          }
+          // uncomment the following if-statement to see the tile size and tile count breakdown
+          // if (funcOp.getName() ==
+          //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+          //   funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+          // }
         }
 
         setLoweringConfig(rootOp,

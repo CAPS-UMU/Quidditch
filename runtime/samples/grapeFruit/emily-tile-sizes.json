@@ -2,7 +2,7 @@
     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64" : {
         "tile-sizes":[[0], [40], [100]],
         "loop-order":[[2,0], [0,0], [1,0]],
-        "dual-buffer": true
+        "dual-buffer": false
     },
     "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64" : {
         "tile-sizes":[[0],[40],[0]],

@@ -45,7 +45,7 @@ Heuristics for Picking Tiles
 Trying different tile sizes results:
 
 ```
-0-24-100: (24, 200, 105915);  1177816 cycles for full NN
+0-24-100: (24, 100, 105915);  1177816 cycles for full NN
 0-24-120: (24, 120, 167326);  1420971 cycles for full NN
 0-32-100: (32, 100, 90218);   1112995 cycles for full NN
 0-40-100: (40, 100, 89788);   1112529 cycles for full NN

@@ -67,32 +67,33 @@ then
        
 else
         if [[ "$1" == "actuallyOnlyOne" ]];
-        then 
-            basename=`basename $2 | sed 's/[.][^.]*$//'` # note that $2 ends with .json
-            echo "Compiling with tile sizes $basename ..."
-            rm --f -R $basename # delete previous outputs
-            mkdir -p $basename # create a local folder for this set of tile sizes
-            echo "$basename.json" # inform user we are about to start processing $basename.json
-            exportedCostFile="$here/$basename/tilingCosts.json" # using full path here
-            gen_cmakelists "$here/tile-sizes-to-test/$2" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt
-            gen_cmakelists "$here/tile-sizes-to-test/$2" $basename $exportedCostFile # save a copy of it in our local folder
-            cd $buildDir
-            cmake .. -GNinja \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$here/$basename/cmakeOutput.txt"
-            ninja -j 20 &> "$here/$basename/buildOutput.txt"
-            grep "kernel does not fit into L1 memory and cannot be compiled" "$here/$basename/buildOutput.txt"
-            cd $here
-            # copy generated executable to local folder
-            cp $grapefruitExec "$basename/GrapeFruit" # copy SRC to DST
-            gen_cmakelists "original" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt            
+        then            
             if [[ "$3" == "noRun" ]];
             then
+                basename=`basename $2 | sed 's/[.][^.]*$//'` # note that $2 ends with .json
+                echo "Compiling with tile sizes $basename ..."
+                rm --f -R $basename # delete previous outputs
+                mkdir -p $basename # create a local folder for this set of tile sizes
+                echo "$basename.json" # inform user we are about to start processing $basename.json
+                exportedCostFile="$here/$basename/tilingCosts.json" # using full path here
+                gen_cmakelists "$here/tile-sizes-to-test/$2" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt
+                gen_cmakelists "$here/tile-sizes-to-test/$2" $basename $exportedCostFile # save a copy of it in our local folder
+                cd $buildDir
+                cmake .. -GNinja \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$here/$basename/cmakeOutput.txt"
+                ninja -j 20 &> "$here/$basename/buildOutput.txt"
+                grep "kernel does not fit into L1 memory and cannot be compiled" "$here/$basename/buildOutput.txt"
+                cd $here
+                # copy generated executable to local folder
+                cp $grapefruitExec "$basename/GrapeFruit" # copy SRC to DST
+                gen_cmakelists "original" $grapefruitDir $exportedCostFile # generate basename-specific CMakeLists.txt 
                 echo "Finished compiling."
             else
+                basename=`basename $2 | sed 's/[.][^.]*$//'` # note that $2 ends with .json
                 echo "Running $basename ..."
                 myExecutable="$here/$basename/GrapeFruit"
                 cd $verilator

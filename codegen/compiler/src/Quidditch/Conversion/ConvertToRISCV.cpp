@@ -281,7 +281,7 @@ void ConvertToRISCV::runOnOperation() {
     FailureOr<StringAttr> riscvAssembly =
         convertToRISCVAssembly(kernelOp, kernelName);
     // FailureOr<StringAttr> riscvAssembly =
-    // convertToRISCVAssemblyMyrtle(kernelOp, kernelName);
+    // convertToRISCVAssemblyMyrtle(kernelOp, kernelName); // uncomment this line to see the streaming region and repeat value
     if (failed(riscvAssembly)) {
      // module->emitWarning()<<"\nRADDISH: (convertToRISCV) convert to RISCV assembly failed\n";
       if (assertCompiled) {
@@ -307,6 +307,7 @@ void ConvertToRISCV::runOnOperation() {
     return WalkResult::advance();
   });
 
+  // uncomment this module walk to get the riscv for the operation vvvvvvvvvv
   // module.walk([&](mlir::func::FuncOp funcOp) { // delete later
   //    if(funcOp.getName() ==
   //        "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"){
@@ -316,4 +317,5 @@ void ConvertToRISCV::runOnOperation() {
 
   // }
   // }); //delete later
+  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 }
