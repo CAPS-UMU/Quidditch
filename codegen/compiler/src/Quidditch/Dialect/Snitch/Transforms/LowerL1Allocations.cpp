@@ -66,6 +66,8 @@ void LowerL1Allocations::runOnOperation() {
     history << "\n";
   }
   history << "Well, those were all the allocOps... =_=\n";
+  history << "\npoodle and pug: ";
+  getOperation()->emitWarning(history.str());
   // radish ^^^^^^^^^^
 
   for (memref::AllocaOp allocOp : allocs) {
@@ -152,9 +154,18 @@ void LowerL1Allocations::runOnOperation() {
     ss << "offset is " << offset << "\n";
     ss << "l1MemoryBytes is " << l1MemoryBytes << ", so "
        << offset - l1MemoryBytes << " too much\n";
-    ss << "kernel does not fit into L1 memory and cannot be compiled";
-    if (offset >= l1MemoryBytes) {
+    if(offset >= l1MemoryBytes){
+      ss << "kernel does not fit into L1 memory and cannot be compiled";
       history << ss.str();
+
+    }
+    else{
+      // history << " apparently the kernel does indeed fit in L1";
+      // history << "\npoodle and pug:";
+      // getOperation()->emitWarning(history.str());
+    }
+    
+    if (offset >= l1MemoryBytes) {
       auto diagEmit =
           assertCompiled ? &Operation::emitError : &Operation::emitWarning;
       ((*getOperation()).*diagEmit)(history.str());
