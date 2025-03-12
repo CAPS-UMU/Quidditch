@@ -6,6 +6,36 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 add_executable(HelloWorld main.c)
 target_link_libraries(HelloWorld snRuntime)
 
+# Hola Word test
+add_executable(HolaWorld holaWorld/main.c
+                           test_case_utils/data.c
+                           test_case_utils/data.h
+                           test_case_utils/memref.h 
+                           test_case_utils/zigzag_utils.h
+                           test_case_utils/zigzag_utils.c
+                           holaWorld/out/holaWorld.o)
+target_link_libraries(HolaWorld snRuntime Quidditch::zigzag_dispatch::zigzag_dispatch)
+
+# Testing a tiled matrix multiplication on the DMA core + 1 Compute Core
+add_executable(TiledMatmul6 tiledMatmul6/main.c
+                           test_case_utils/data.c
+                           test_case_utils/data.h
+                           test_case_utils/memref.h 
+                           test_case_utils/zigzag_utils.h
+                           test_case_utils/zigzag_utils.c
+                           tiledMatmul6/out/tiledMatmul6.o)
+target_link_libraries(TiledMatmul6 snRuntime Quidditch::zigzag_dispatch::zigzag_dispatch)
+
+# Testing a tiled matrix multiplication on the cluster
+add_executable(TiledMatmul12 tiledMatmul12/main.c
+                           test_case_utils/data.c
+                           test_case_utils/data.h
+                           test_case_utils/memref.h 
+                           test_case_utils/zigzag_utils.h
+                           test_case_utils/zigzag_utils.c
+                           tiledMatmul12/out/tiledMatmul12.o)
+target_link_libraries(TiledMatmul12 snRuntime Quidditch::zigzag_dispatch::zigzag_dispatch)
+
 macro(test_executable target_name)
   cmake_parse_arguments(_RULE "PRECOMMIT;NIGHTLY" "" "" ${ARGN})
 

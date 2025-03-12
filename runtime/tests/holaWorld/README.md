@@ -1,7 +1,9 @@
 # Hola World
 
 - This example deploys a *tiny* bit of work onto a single compute core and then prints the result of the computation from the DMA core.
-- All data is in L3 
+- All data is in L3
+
+[back to landing page](../../../without-iree/README.md)
 
 ## Running the example on Snitch
 
