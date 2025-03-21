@@ -136,6 +136,7 @@ shi-tzu:
   %32 = "memref.view"(%0, %31) : (memref<100000xi8>, index) -> memref<1248xf64>
   %33 = "memref.reinterpret_cast"(%32) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>, static_offsets = array<i64: 0>, static_sizes = array<i64: 1, 1248>, static_strides = array<i64: 1248, 1>}> 
   : (memref<1248xf64>) -> memref<1x1248xf64>
+  
   // allocate 1x1248 in L1 
   %34 = "memref.alloca"() <{alignment = 64 : i64, operandSegmentSizes = array<i32: 0, 0>}> 
   : () -> memref<1x1248xf64, #quidditch_snitch.l1_encoding>
@@ -144,6 +145,7 @@ shi-tzu:
   %35 = "memref.subview"(%33) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>, static_offsets = array<i64: 0, 0>, static_sizes = array<i64: 1, 1200>, static_strides = array<i64: 1, 1>}> 
   : (memref<1x1248xf64>) 
   -> memref<1x1200xf64, strided<[1248, 1]>, #quidditch_snitch.l1_encoding>
+  
   // copy the zeroed out 1200 buffer into a size 1200 subview of the 1248 size buffer, all in L1
   %36 = "dma.start_transfer"(%27, %35) : (memref<1x1200xf64>, memref<1x1200xf64, strided<[1248, 1]>, #quidditch_snitch.l1_encoding>) -> !dma.token
   "dma.wait_for_transfer"(%36) : (!dma.token) -> ()
