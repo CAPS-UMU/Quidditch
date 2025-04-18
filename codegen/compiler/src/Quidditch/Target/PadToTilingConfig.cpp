@@ -174,6 +174,361 @@ static tensor::PadOp cloneWithUndefPad(PatternRewriter &rewriter,
 
 namespace {
 
+// helper functions for pattern to remove redundant buffer
+
+bool checkSliceIsRedundant(tensor::ExtractSliceOp &sliceOp,
+                           std::stringstream &ss);
+
+bool checkFillsWithZeros(linalg::FillOp &fillOp, std::stringstream &ss);
+
+bool checkPadsWithZeros(mlir::tensor::PadOp &padOp, std::stringstream &ss);
+
+bool checkIsMatVecTrans(linalg::LinalgOp &linalgOp);
+
+bool checkOutputIsPadded(linalg::LinalgOp &linalgOp);
+
+bool isPaddingFillWithZeros(mlir::tensor::PadOp &padOp, std::stringstream &ss);
+
+bool isPaddingZeroOffsetSlice(mlir::tensor::PadOp &padOp,
+                              std::stringstream &ss);
+
+bool slicesFillWithZeros(tensor::ExtractSliceOp &extractSlice,
+                         std::stringstream &ss);
+
+bool fillsEmptyTensor(mlir::linalg::FillOp &fill, std::stringstream &ss);
+
+bool replaceEmptyWithLargerEmpty(PatternRewriter &rewriter,
+                                 linalg::LinalgOp &linalgOp,
+                                 tensor::EmptyOp *largerEmpty,
+                                 std::stringstream &ss);
+
+bool replaceLinalgOutputWithLargerFill(PatternRewriter &rewriter,
+                                       linalg::LinalgOp &linalgOp,
+                                       mlir::linalg::FillOp *largerFill,
+                                       std::stringstream &ss);
+
+bool replaceFillWithLargerFill(PatternRewriter &rewriter,
+                               linalg::LinalgOp &linalgOp,
+                               tensor::EmptyOp *&largerEmpty,
+                               std::stringstream &ss);
+
+bool replacePadOpWithLargerFill(PatternRewriter &rewriter,
+                                linalg::LinalgOp &linalgOp,
+                                std::stringstream &ss);
+/*
+plan for more general pattern:
+1. maybe check if I am a matrix-vector-transpose
+what is the size of my output argument, o_sz?
+what is the defining OP of my output argument, o_arg?
+func(o_arg,o_sz, filledWZeroAtSz=false)
+case: fill
+  A. fill with 0, size of o_sz?
+    Recurse(definingOp, o_sz, true)
+  B. No.
+case: slice
+  A. redundant slice?
+    Recurse(definingOp, o_sz)
+  B. a slice into something bigger? No.
+case: pad
+  A: pad with 0, to size of o_sz?
+    pad_sz = size of pad
+    Recurse(definingOp, o_sz)
+  B: No.
+case: empty
+  A. sz <= o_sz
+    if(filledWZeroAtSz) then REPLACE
+    else: No.
+  B No.
+*/
+
+LogicalResult reducesToEmpty(const mlir::Operation &op) { return failure(); }
+
+LogicalResult reducesToPaddedEmpty(mlir::Operation &op) { 
+  TypeSwitch<Operation *, LogicalResult>(&op)//fill.getOperand(theIndex)
+  .Case<mlir::tensor::PadOp>(
+      [&](mlir::tensor::PadOp op) { 
+        return reducesToEmpty(*op.getOperand(0).getDefiningOp()); })
+  .Case<linalg::FillOp>(
+        [&](linalg::FillOp op) { return failure(); })
+  .Case<tensor::EmptyOp>(
+          [&](tensor::EmptyOp op) { return failure(); })
+  .Case<tensor::ExtractSliceOp>(
+            [&](tensor::ExtractSliceOp op) { return failure(); })
+  .Default([&](const auto &op) { return failure(); }); //tensor::ExtractSliceOp
+ }
+
+// this pattern runs BEFORE all of the undefpadding patterns.
+// It removes redundant buffer "allocated" during padding of the row dimension.
+/*
+  If I have a matrix-vector transpose operation,
+  and my OUTPUT ARGUMENT is a tensor.pad operation, where
+             - the padding is set to zero
+             - the tensor to padd is a slice called SLICE, where
+             - SLICE is a _redundant_ slice of a fill operation called FILL,
+  where
+             - FILL fills a tensor.empty operation with _zeros_
+  Then
+   1. create tensor.empty of size _padded_
+   2. fill empty tensor with zeros
+   3. Replace linalg op's OUTPUT ARGUMENT with this tensor.
+
+*/
+
+struct RemoveRedundantBuffer : OpInterfaceRewritePattern<linalg::LinalgOp> {
+  using OpInterfaceRewritePattern<linalg::LinalgOp>::OpInterfaceRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::LinalgOp linalgOp,
+                                PatternRewriter &rewriter) const override {
+
+    // changed initialized to false
+    bool changed = false;
+
+    // only handle matmul transpose operations for now
+    if (!checkIsMatVecTrans(linalgOp)) {
+      return success(changed);
+    }
+
+    // don't handle linalg operations with multiple output arguments
+    const auto &outputs = linalgOp.getRegionOutputArgs();
+    if (outputs.vec().size() != 1) {
+      linalgOp.emitWarning()
+          << "Error: Expected a mat-vec-transb with only ONE output argument\n";
+      return success(changed);
+    }
+
+    // make sure the output argument is a pad.tensor
+    if (!checkOutputIsPadded(linalgOp)) {
+      return success(changed);
+    }
+
+    // extract the output argument
+    mlir::BlockArgument &outputArg = linalgOp.getRegionOutputArgs()[0];
+    mlir::OpOperand *oper = linalgOp.getMatchingOpOperand(outputArg);
+    mlir::Value operAsValue = oper->get();
+    mlir::tensor::PadOp padOp = operAsValue.getDefiningOp<tensor::PadOp>();
+
+    // TODO: if the output op derives from a padded empty tensor, replace with
+    // larger tensor filled with 0
+    
+    // Right now, always replaces output arg with a larger tensor of zeroes
+    // create empty op
+    mlir::ValueRange no_operands({});
+    tensor::EmptyOp empty = rewriter.create<tensor::EmptyOp>(
+        padOp.getLoc(), padOp.getType(), no_operands);
+    // create 0 op
+    auto zeroVal = rewriter.getZeroAttr(getElementTypeOrSelf(padOp.getType()));
+    arith::ConstantOp zConstant =
+        rewriter.create<arith::ConstantOp>(empty.getLoc(), zeroVal);
+    // create fill with 0 op
+    llvm::SmallVector<mlir::Value> inputVals = {zConstant};
+    llvm::SmallVector<mlir::Value> outputVals = {empty};
+    linalg::FillOp fill = rewriter.create<linalg::FillOp>(
+        zConstant.getLoc(), padOp.getType(), inputVals, outputVals);
+    // replace output argument with the new fill operation
+    rewriter.replaceAllOpUsesWith(padOp, fill);
+    changed = true;
+    return success(changed);
+  }
+};
+
+bool checkSliceIsRedundant(tensor::ExtractSliceOp &sliceOp,
+                           std::stringstream &ss) {
+  return true;
+}
+
+bool checkFillsWithZeros(linalg::FillOp &fillOp, std::stringstream &ss) {
+  return true;
+}
+
+bool checkPadsWithZeros(mlir::tensor::PadOp &padOp, std::stringstream &ss) {
+  return true;
+}
+
+bool checkIsMatVecTrans(linalg::LinalgOp &linalgOp) {
+  auto result = TypeSwitch<Operation *, LogicalResult>(linalgOp.getOperation())
+                    .Case<linalg::MatmulTransposeBOp>(
+                        [&](linalg::LinalgOp op) { return success(); })
+                    .Default([&](const auto &op) { return failure(); });
+  return (!failed(result));
+}
+
+bool checkOutputIsPadded(linalg::LinalgOp &linalgOp) {
+  // make sure there is only ONE output argument
+  const auto &outputs = linalgOp.getRegionOutputArgs();
+  if (outputs.vec().size() != 1) {
+    linalgOp.emitWarning()
+        << "Error: Expected a mat-vec-transb with only ONE output argument\n";
+    return false;
+  }
+  // make sure the output argument is a pad.tensor
+  auto &outputArg = outputs[0];
+  auto oper = linalgOp.getMatchingOpOperand(outputArg);
+  auto padOp = oper->get().getDefiningOp<tensor::PadOp>();
+  if (!padOp) {
+    return false;
+  }
+  return true;
+}
+
+bool isPaddingFillWithZeros(mlir::tensor::PadOp &padOp, std::stringstream &ss) {
+  auto fill = padOp.getSource().getDefiningOp<linalg::FillOp>();
+  if (!fill) {
+    // auto theSource = padOp.getSource();
+    ss << "error: not padding a fill operation\n";
+    return false;
+  }
+  return true;
+}
+
+bool isPaddingZeroOffsetSlice(mlir::tensor::PadOp &padOp,
+                              std::stringstream &ss) {
+  auto extractSlice = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!extractSlice) {
+    return false;
+  }
+  return true;
+}
+
+bool slicesFillWithZeros(tensor::ExtractSliceOp &extractSlice,
+                         std::stringstream &ss) {
+  auto fill = extractSlice.getSource().getDefiningOp<linalg::FillOp>();
+  if (!fill) {
+    ss << "slice passed to pad op does not meet criteria (not slicing result "
+          "of a fillOp)\n";
+    return false;
+  }
+  // make sure this FILL was filling with ZEROs
+  if (!checkFillsWithZeros(fill, ss)) {
+    ss << "does not fill with zero\n";
+    return false;
+  }
+  return true;
+}
+
+bool fillsEmptyTensor(mlir::linalg::FillOp &fill, std::stringstream &ss) {
+  // make sure there is only ONE output argument
+  const auto &fillOutputs = fill.getRegionOutputArgs();
+  if (fillOutputs.vec().size() != 1) {
+    ss << "Error: Expected a fill operation with only ONE output argument\n";
+    return false;
+  }
+  // make sure the output argument is a tensor.empty
+  const auto &fillOutputArg = fillOutputs[0];
+  auto fillOper = fill.getMatchingOpOperand(fillOutputArg);
+  auto emptyOp = fillOper->get().getDefiningOp<tensor::EmptyOp>();
+  if (!emptyOp) {
+    ss << "Error: fill operation does not fill an empty tensor.\n";
+    return false;
+  }
+  return true;
+}
+
+bool replaceEmptyWithLargerEmpty(PatternRewriter &rewriter,
+                                 linalg::LinalgOp &linalgOp,
+                                 tensor::EmptyOp *largerEmpty,
+                                 std::stringstream &ss) {
+  mlir::BlockArgument &outputArg = linalgOp.getRegionOutputArgs()[0];
+  mlir::OpOperand *oper = linalgOp.getMatchingOpOperand(outputArg);
+  mlir::Value operAsValue = oper->get();
+  mlir::tensor::PadOp padOp = operAsValue.getDefiningOp<tensor::PadOp>();
+  auto extractSlice = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+  auto fill = extractSlice.getSource().getDefiningOp<linalg::FillOp>();
+  const auto &fillOutputs = fill.getRegionOutputArgs();
+  const auto &fillOutputArg = fillOutputs[0];
+  auto fillOper = fill.getMatchingOpOperand(fillOutputArg);
+  auto emptyOp = fillOper->get().getDefiningOp<tensor::EmptyOp>();
+  // copy output pad operation's type
+  ReifiedRankedShapedTypeDims dims;
+  if (failed(reifyResultShapes(rewriter, padOp, dims)))
+    return false;
+
+  rewriter.replaceOpWithNewOp<tensor::EmptyOp>(
+      emptyOp, dims.front(), getElementTypeOrSelf(padOp.getType()));
+
+  return true;
+}
+
+bool replaceLinalgOutputWithLargerFill(PatternRewriter &rewriter,
+                                       linalg::LinalgOp &linalgOp,
+                                       mlir::linalg::FillOp *largerFill,
+                                       std::stringstream &ss) {
+  mlir::BlockArgument &outputArg = linalgOp.getRegionOutputArgs()[0];
+  mlir::OpOperand *oper = linalgOp.getMatchingOpOperand(outputArg);
+  mlir::Value operAsValue = oper->get();
+  mlir::tensor::PadOp padOp = operAsValue.getDefiningOp<tensor::PadOp>();
+  auto extractSlice = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+  auto fill = extractSlice.getSource().getDefiningOp<linalg::FillOp>();
+  auto fillAsOp = fill.getResult(0);
+  std::string os = "";
+  llvm::raw_string_ostream ros = llvm::raw_string_ostream(os);
+
+  ros << "\ninspecting the getDpsInitsMutable collection \n";
+
+  for (OpOperand &inits : linalgOp.getDpsInitsMutable()) {
+    rewriter.modifyOpInPlace(linalgOp,
+                             [&, &operand = inits] { operand.set(fillAsOp); });
+  }
+
+  return true;
+}
+
+bool replaceFillWithLargerFill(PatternRewriter &rewriter,
+                               linalg::LinalgOp &linalgOp,
+                               tensor::EmptyOp *&largerEmpty,
+                               std::stringstream &ss) {
+  mlir::BlockArgument &outputArg = linalgOp.getRegionOutputArgs()[0];
+  mlir::OpOperand *oper = linalgOp.getMatchingOpOperand(outputArg);
+  mlir::Value operAsValue = oper->get();
+  mlir::tensor::PadOp padOp = operAsValue.getDefiningOp<tensor::PadOp>();
+  auto extractSlice = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+  auto fill = extractSlice.getSource().getDefiningOp<linalg::FillOp>();
+  const auto &fillOutputs = fill.getRegionOutputArgs();
+  const auto &fillOutputArg = fillOutputs[0];
+  auto fillOper = fill.getMatchingOpOperand(fillOutputArg);
+  auto emptyOp = fillOper->get().getDefiningOp<tensor::EmptyOp>();
+  // create a singleton list of result types, where
+  // result type is the same as the padOp's/ new emptyOp's
+  llvm::SmallVector<mlir::Type> resultType = {};
+  resultType.push_back(padOp.getType());
+  llvm::SmallVector<mlir::Value> inputVals = {};
+  const auto &fillInputs = fill.getRegionInputArgs();
+  //  copy input operands as mlir values
+  for (const auto &arg : fillInputs) {
+    auto oper = fill.getMatchingOpOperand(arg);
+    const auto theIndex = oper->getOperandNumber();
+    const auto theVal = fill.getOperand(theIndex);
+    inputVals.push_back(theVal);
+  }
+  //  copy output operands as mlir values
+  llvm::SmallVector<mlir::Value> outputVals = {};
+  outputVals.push_back(emptyOp);
+  mlir::ValueRange inputValRange(inputVals);
+  mlir::ValueRange outputValRange(outputVals);
+  mlir::TypeRange resultTypeRange(resultType);
+
+  rewriter.replaceOpWithNewOp<linalg::FillOp>(fill, resultTypeRange,
+                                              inputValRange, outputValRange);
+  return true;
+}
+
+bool replacePadOpWithLargerFill(PatternRewriter &rewriter,
+                                linalg::LinalgOp &linalgOp,
+                                std::stringstream &ss) {
+  mlir::BlockArgument &outputArg = linalgOp.getRegionOutputArgs()[0];
+  mlir::OpOperand *oper = linalgOp.getMatchingOpOperand(outputArg);
+  mlir::Value operAsValue = oper->get();
+  mlir::tensor::PadOp padOp = operAsValue.getDefiningOp<tensor::PadOp>();
+  auto extractSlice = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+  auto fill = extractSlice.getSource().getDefiningOp<linalg::FillOp>();
+  rewriter.replaceAllOpUsesWith(padOp, fill);
+  linalgOp.emitWarning() << "\nI did the rewrite!!";
+  return true;
+}
+
+} // namespace
+
+namespace {
+
 // Patterns applied on linalg operations to turn zero pads created by the
 // padding rewriter into undef pads.
 // Note that these assume that padding of results are not consumed in a way
@@ -403,12 +758,28 @@ void PadToTilingConfig::runOnOperation() {
   std::optional<IntegerAttr> attr = getConfigIntegerAttr(
       IREE::HAL::ExecutableTargetAttr::lookup(getOperation()), "compute_cores");
 
-  getOperation()->emitWarning()<< "\nvvv before padding vvv";
-  // Pad every linalg op to a multiple of all applied tile sizes.
+  // getOperation()->emitWarning() << "\nvvv before padding vvv";
+  //  Pad every linalg op to a multiple of all applied tile sizes.
   for (linalg::LinalgOp &linalgOp : workList)
     if (failed(padToTileSize(linalgOp, attr)))
       return signalPassFailure();
-  getOperation()->emitWarning()<< "\nvvv after padding vvv";
+  getOperation()->emitWarning() << "\nvvv after padding vvv";
+
+  // Remove redundant buffer inserted by padding row dimension
+  {
+    RewritePatternSet patterns(&getContext());
+    auto config = mlir::GreedyRewriteConfig();
+    config.strictMode = GreedyRewriteStrictness::ExistingOps;
+
+    patterns.insert<RemoveRedundantBuffer>(&getContext());
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
+                                            config))) {
+      getOperation()->emitWarning()
+          << "\nremoving redunand buffer pattern failed\n";
+      return signalPassFailure();
+    }
+  }
+  getOperation()->emitWarning() << "\nvvv after pattern vvv";
   // First perform just the conversion of zero-pads to undef-pads.
   // These must run separately from later patterns that may erase pad ops
   // entirely which discards information required by these patterns.
