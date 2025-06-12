@@ -67,7 +67,7 @@ void LowerL1Allocations::runOnOperation() {
   }
   history << "Well, those were all the allocOps... =_=\n";
   history << "\npoodle and pug: ";
-  getOperation()->emitWarning(history.str());
+  //getOperation()->emitWarning(history.str());
   // radish ^^^^^^^^^^
 
   for (memref::AllocaOp allocOp : allocs) {
