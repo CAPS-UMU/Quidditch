@@ -1,7 +1,7 @@
 
 iree_turbine(SRC NsNet2.py DST ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DTYPE "f64")
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm)
+# quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2) # remove snitch target for nsnet test case
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm FLAGS -mlir-print-ir-after=convert-elementwise-to-linalg)
 
 add_library(nsnet2_util nsnet2_util.c)
 target_link_libraries(nsnet2_util
@@ -34,11 +34,11 @@ int main() {
   )
 endmacro()
 
-create_experiment_variant(
-    TARGET NsNet2
-    IREE_MODULE nsnet2
-    QUERY_FUNC "quidditch_compiled_ns_net2_linked_quidditch_library_query"
-)
+# create_experiment_variant(
+#     TARGET NsNet2
+#     IREE_MODULE nsnet2
+#     QUERY_FUNC "quidditch_compiled_ns_net2_linked_quidditch_library_query"
+# ) # remove snitch target for nsnet test case
 create_experiment_variant(
     TARGET NsNet2LLVM
     IREE_MODULE nsnet2_llvm

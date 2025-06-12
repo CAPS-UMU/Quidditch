@@ -1,0 +1,46 @@
+diff --git a/runtime/samples/nsnet2/CMakeLists.txt b/runtime/samples/nsnet2/CMakeLists.txt
+index 71a5e7c..184acf6 100644
+--- a/runtime/samples/nsnet2/CMakeLists.txt
++++ b/runtime/samples/nsnet2/CMakeLists.txt
+@@ -1,6 +1,6 @@
+ 
+ iree_turbine(SRC NsNet2.py DST ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DTYPE "f64")
+-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2)
++# quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2) # remove snitch target for nsnet test case
+ quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm)
+ 
+ add_library(nsnet2_util nsnet2_util.c)
+@@ -34,11 +34,11 @@ int main() {
+   )
+ endmacro()
+ 
+-create_experiment_variant(
+-    TARGET NsNet2
+-    IREE_MODULE nsnet2
+-    QUERY_FUNC "quidditch_compiled_ns_net2_linked_quidditch_library_query"
+-)
++# create_experiment_variant(
++#     TARGET NsNet2
++#     IREE_MODULE nsnet2
++#     QUERY_FUNC "quidditch_compiled_ns_net2_linked_quidditch_library_query"
++# ) # remove snitch target for nsnet test case
+ create_experiment_variant(
+     TARGET NsNet2LLVM
+     IREE_MODULE nsnet2_llvm
+diff --git a/runtime/tests/CMakeLists.txt b/runtime/tests/CMakeLists.txt
+index 7704a11..61bbbc6 100644
+--- a/runtime/tests/CMakeLists.txt
++++ b/runtime/tests/CMakeLists.txt
+@@ -83,5 +83,5 @@ endmacro()
+ test_executable(HelloWorld PRECOMMIT)
+ test_executable(vec_multiply PRECOMMIT)
+ test_executable(big_matvec NIGHTLY)
+-test_executable(NsNet2 NIGHTLY)
++# test_executable(NsNet2 NIGHTLY) # remove snitch target for nsnet test case
+ test_executable(NsNet2LLVM NIGHTLY)
+diff --git a/snitch_cluster b/snitch_cluster
+--- a/snitch_cluster
++++ b/snitch_cluster
+@@ -1 +1 @@
+-Subproject commit 2fb4c707d3d81c9a6e3008e68b9c2fee716a2ff3
++Subproject commit 2fb4c707d3d81c9a6e3008e68b9c2fee716a2ff3-dirty

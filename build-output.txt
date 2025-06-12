@@ -1,0 +1,395 @@
+[0/2] Re-checking globbed directories...
+[0/8] Performing build step for 'codegen'
+[0/2] Re-checking globbed directories...
+ninja: no work to do.
+[2/8] No install step for 'codegen'
+[2/8] No test step for 'codegen'
+[4/8] Completed 'codegen'
+[4/8] Performing build step for 'runtime'
+[0/2] Re-checking globbed directories...
+[1/2] Re-running CMake...
+-- Could not find nvcc, please set CUDAToolkit_ROOT.
+-- IREE HAL drivers:
+-- IREE HAL local executable library loaders:
+-- IREE HAL local executable plugin mechanisms:
+-- Not adding LLVM/MLIR because the configuration does not require it
+-- Disabling compiler loader (platform does not support library loading)
+-- Configuring IREE runtime plugins
+-- Runtime tracing disabled
+-- Using iree-compile at /home/hoppip/Quidditch/build/codegen/iree-configuration/iree/tools/iree-compile
+-- Detected iree-compile within another cmake build
+-- Configuring done (0.4s)
+-- Generating done (0.2s)
+-- Build files have been written to: /home/hoppip/Quidditch/build/runtime
+[0/2] Re-checking globbed directories...
+[0/16] Updating iree-compile
+[0/2] Re-checking globbed directories...
+ninja: no work to do.
+[2/16] Generating simple_add/simple_add_module.h, simple_add/simple_add.o, simple_add/simple_add.h, simple_add/simple_add_llvm.h
+[3/16] Building C object samples/vec_multiply/CMakeFiles/simple_add.dir/simple_add/simple_add_module.c.obj
+[4/16] Building C object samples/vec_multiply/CMakeFiles/vec_multiply.dir/main.c.obj
+[5/16] Linking C static library samples/vec_multiply/libsimple_add.a
+[6/16] Generating nsnet2_llvm/nsnet2_llvm_module.h, nsnet2_llvm/nsnet2_llvm.h, nsnet2_llvm/nsnet2_llvm.o
+// -----// IR Dump After ConvertElementwiseToLinalgPass (convert-elementwise-to-linalg) //----- //
+util.func public @main(%arg0: !hal.buffer_view) -> !hal.buffer_view attributes {iree.abi.stub} {
+  %0 = util.null : !hal.fence
+  %c-1_i32 = arith.constant -1 : i32
+  %c0 = arith.constant 0 : index
+  %device_0 = hal.devices.get %c0 : !hal.device
+  %fence = hal.fence.create device(%device_0 : !hal.device) flags("None") : !hal.fence
+  %1 = util.call @main$async(%arg0, %0, %fence) : (!hal.buffer_view, !hal.fence, !hal.fence) -> !hal.buffer_view
+  %status = hal.fence.await until([%fence]) timeout_millis(%c-1_i32) : i32
+  util.return %1 : !hal.buffer_view
+}
+
+// -----// IR Dump After ConvertElementwiseToLinalgPass (convert-elementwise-to-linalg) //----- //
+util.func public @main$async(%arg0: !hal.buffer_view, %arg1: !hal.fence, %arg2: !hal.fence) -> !hal.buffer_view attributes {inlining_policy = #util.inline.never, iree.abi.model = "coarse-fences", iree.abi.stub} {
+  %cst = arith.constant 1.000000e+00 : f64
+  %cst_0 = arith.constant 0.000000e+00 : f64
+  %cst_1 = arith.constant dense_resource<torch_tensor_400_161_torch.float64> : tensor<400x161xf64>
+  %cst_2 = arith.constant dense_resource<torch_tensor_400_torch.float64> : tensor<400xf64>
+  %cst_3 = arith.constant dense_resource<torch_tensor_1200_400_torch.float64> : tensor<1200x400xf64>
+  %cst_4 = arith.constant dense_resource<torch_tensor_1200_torch.float64> : tensor<1200xf64>
+  %cst_5 = arith.constant dense_resource<torch_tensor_1200_400_torch.float64_1> : tensor<1200x400xf64>
+  %cst_6 = arith.constant dense_resource<torch_tensor_1200_torch.float64_1> : tensor<1200xf64>
+  %cst_7 = arith.constant dense_resource<torch_tensor_1200_400_torch.float64_2> : tensor<1200x400xf64>
+  %cst_8 = arith.constant dense_resource<torch_tensor_1200_torch.float64_2> : tensor<1200xf64>
+  %cst_9 = arith.constant dense_resource<torch_tensor_1200_400_torch.float64_3> : tensor<1200x400xf64>
+  %cst_10 = arith.constant dense_resource<torch_tensor_1200_torch.float64_3> : tensor<1200xf64>
+  %cst_11 = arith.constant dense_resource<torch_tensor_600_400_torch.float64> : tensor<600x400xf64>
+  %cst_12 = arith.constant dense_resource<torch_tensor_600_torch.float64> : tensor<600xf64>
+  %cst_13 = arith.constant dense_resource<torch_tensor_600_600_torch.float64> : tensor<600x600xf64>
+  %cst_14 = arith.constant dense_resource<torch_tensor_600_torch.float64_1> : tensor<600xf64>
+  %cst_15 = arith.constant dense_resource<torch_tensor_161_600_torch.float64> : tensor<161x600xf64>
+  %cst_16 = arith.constant dense_resource<torch_tensor_161_torch.float64> : tensor<161xf64>
+  %0 = hal.tensor.import wait(%arg1) => %arg0 : !hal.buffer_view -> tensor<1x1x161xf64>
+  %_state1.global = util.global.load @_state1.global : tensor<1x1x400xf64>
+  %_state2.global = util.global.load @_state2.global : tensor<1x1x400xf64>
+  %collapsed = tensor.collapse_shape %0 [[0], [1, 2]] : tensor<1x1x161xf64> into tensor<1x161xf64>
+  %1 = tensor.empty() : tensor<161x400xf64>
+  %2 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_1 : tensor<400x161xf64>) outs(%1 : tensor<161x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<161x400xf64>
+  %3 = tensor.empty() : tensor<1x400xf64>
+  %4 = linalg.fill ins(%cst_0 : f64) outs(%3 : tensor<1x400xf64>) -> tensor<1x400xf64>
+  %5 = linalg.matmul ins(%collapsed, %2 : tensor<1x161xf64>, tensor<161x400xf64>) outs(%4 : tensor<1x400xf64>) -> tensor<1x400xf64>
+  %6 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%5 : tensor<1x400xf64>) outs(%3 : tensor<1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x400xf64>
+  %7 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%6, %cst_2 : tensor<1x400xf64>, tensor<400xf64>) outs(%3 : tensor<1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x400xf64>
+  %expanded = tensor.expand_shape %7 [[0], [1, 2]] output_shape [1, 1, 400] : tensor<1x400xf64> into tensor<1x1x400xf64>
+  %collapsed_17 = tensor.collapse_shape %_state1.global [[0, 1], [2]] : tensor<1x1x400xf64> into tensor<1x400xf64>
+  %8 = tensor.empty() : tensor<1x1x400xf64>
+  %9 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%expanded : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1x400xf64>
+  %collapsed_18 = tensor.collapse_shape %9 [[0], [1, 2]] : tensor<1x1x400xf64> into tensor<1x400xf64>
+  %10 = tensor.empty() : tensor<400x1200xf64>
+  %11 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_3 : tensor<1200x400xf64>) outs(%10 : tensor<400x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<400x1200xf64>
+  %12 = tensor.empty() : tensor<1x1200xf64>
+  %13 = linalg.fill ins(%cst_0 : f64) outs(%12 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+  %14 = linalg.matmul ins(%collapsed_18, %11 : tensor<1x400xf64>, tensor<400x1200xf64>) outs(%13 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+  %15 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%14 : tensor<1x1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1200xf64>
+  %16 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%15, %cst_4 : tensor<1x1200xf64>, tensor<1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1200xf64>
+  %extracted_slice = tensor.extract_slice %16[0, 0] [1, 400] [1, 1] : tensor<1x1200xf64> to tensor<1x400xf64>
+  %extracted_slice_19 = tensor.extract_slice %16[0, 400] [1, 400] [1, 1] : tensor<1x1200xf64> to tensor<1x400xf64>
+  %extracted_slice_20 = tensor.extract_slice %16[0, 800] [1, 400] [1, 1] : tensor<1x1200xf64> to tensor<1x400xf64>
+  %17 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_5 : tensor<1200x400xf64>) outs(%10 : tensor<400x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<400x1200xf64>
+  %18 = linalg.matmul ins(%collapsed_17, %17 : tensor<1x400xf64>, tensor<400x1200xf64>) outs(%13 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+  %19 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%18 : tensor<1x1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1200xf64>
+  %20 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%19, %cst_6 : tensor<1x1200xf64>, tensor<1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1200xf64>
+  %expanded_21 = tensor.expand_shape %20 [[0], [1, 2]] output_shape [1, 1, 1200] : tensor<1x1200xf64> into tensor<1x1x1200xf64>
+  %extracted_slice_22 = tensor.extract_slice %expanded_21[0, 0, 0] [1, 1, 400] [1, 1, 1] : tensor<1x1x1200xf64> to tensor<1x1x400xf64>
+  %extracted_slice_23 = tensor.extract_slice %expanded_21[0, 0, 400] [1, 1, 400] [1, 1, 1] : tensor<1x1x1200xf64> to tensor<1x1x400xf64>
+  %extracted_slice_24 = tensor.extract_slice %expanded_21[0, 0, 800] [1, 1, 400] [1, 1, 1] : tensor<1x1x1200xf64> to tensor<1x1x400xf64>
+  %21 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_22, %extracted_slice : tensor<1x1x400xf64>, tensor<1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %22 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%21 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.negf %in : f64
+    %81 = math.exp %80 : f64
+    %82 = arith.addf %81, %cst : f64
+    %83 = arith.divf %cst, %82 : f64
+    linalg.yield %83 : f64
+  } -> tensor<1x1x400xf64>
+  %23 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_23, %extracted_slice_19 : tensor<1x1x400xf64>, tensor<1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %24 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%23 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.negf %in : f64
+    %81 = math.exp %80 : f64
+    %82 = arith.addf %81, %cst : f64
+    %83 = arith.divf %cst, %82 : f64
+    linalg.yield %83 : f64
+  } -> tensor<1x1x400xf64>
+  %25 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_24, %22 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.mulf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %26 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_20, %25 : tensor<1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %27 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%26 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = math.tanh %in : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %28 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%_state1.global, %27 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.subf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %29 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%28, %24 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.mulf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %30 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%29, %27 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %31 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%30 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1x400xf64>
+  %collapsed_25 = tensor.collapse_shape %_state2.global [[0, 1], [2]] : tensor<1x1x400xf64> into tensor<1x400xf64>
+  %32 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%31 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1x400xf64>
+  %collapsed_26 = tensor.collapse_shape %32 [[0], [1, 2]] : tensor<1x1x400xf64> into tensor<1x400xf64>
+  %33 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_7 : tensor<1200x400xf64>) outs(%10 : tensor<400x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<400x1200xf64>
+  %34 = linalg.matmul ins(%collapsed_26, %33 : tensor<1x400xf64>, tensor<400x1200xf64>) outs(%13 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+  %35 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%34 : tensor<1x1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1200xf64>
+  %36 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%35, %cst_8 : tensor<1x1200xf64>, tensor<1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1200xf64>
+  %extracted_slice_27 = tensor.extract_slice %36[0, 0] [1, 400] [1, 1] : tensor<1x1200xf64> to tensor<1x400xf64>
+  %extracted_slice_28 = tensor.extract_slice %36[0, 400] [1, 400] [1, 1] : tensor<1x1200xf64> to tensor<1x400xf64>
+  %extracted_slice_29 = tensor.extract_slice %36[0, 800] [1, 400] [1, 1] : tensor<1x1200xf64> to tensor<1x400xf64>
+  %37 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_9 : tensor<1200x400xf64>) outs(%10 : tensor<400x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<400x1200xf64>
+  %38 = linalg.matmul ins(%collapsed_25, %37 : tensor<1x400xf64>, tensor<400x1200xf64>) outs(%13 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+  %39 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%38 : tensor<1x1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1200xf64>
+  %40 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%39, %cst_10 : tensor<1x1200xf64>, tensor<1200xf64>) outs(%12 : tensor<1x1200xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1200xf64>
+  %expanded_30 = tensor.expand_shape %40 [[0], [1, 2]] output_shape [1, 1, 1200] : tensor<1x1200xf64> into tensor<1x1x1200xf64>
+  %extracted_slice_31 = tensor.extract_slice %expanded_30[0, 0, 0] [1, 1, 400] [1, 1, 1] : tensor<1x1x1200xf64> to tensor<1x1x400xf64>
+  %extracted_slice_32 = tensor.extract_slice %expanded_30[0, 0, 400] [1, 1, 400] [1, 1, 1] : tensor<1x1x1200xf64> to tensor<1x1x400xf64>
+  %extracted_slice_33 = tensor.extract_slice %expanded_30[0, 0, 800] [1, 1, 400] [1, 1, 1] : tensor<1x1x1200xf64> to tensor<1x1x400xf64>
+  %41 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_31, %extracted_slice_27 : tensor<1x1x400xf64>, tensor<1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %42 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%41 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.negf %in : f64
+    %81 = math.exp %80 : f64
+    %82 = arith.addf %81, %cst : f64
+    %83 = arith.divf %cst, %82 : f64
+    linalg.yield %83 : f64
+  } -> tensor<1x1x400xf64>
+  %43 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_32, %extracted_slice_28 : tensor<1x1x400xf64>, tensor<1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %44 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%43 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.negf %in : f64
+    %81 = math.exp %80 : f64
+    %82 = arith.addf %81, %cst : f64
+    %83 = arith.divf %cst, %82 : f64
+    linalg.yield %83 : f64
+  } -> tensor<1x1x400xf64>
+  %45 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_33, %42 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.mulf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %46 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%extracted_slice_29, %45 : tensor<1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %47 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%46 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = math.tanh %in : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %48 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%_state2.global, %47 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.subf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %49 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%48, %44 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.mulf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %50 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%49, %47 : tensor<1x1x400xf64>, tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x1x400xf64>
+  %51 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%50 : tensor<1x1x400xf64>) outs(%8 : tensor<1x1x400xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x1x400xf64>
+  %collapsed_34 = tensor.collapse_shape %51 [[0], [1, 2]] : tensor<1x1x400xf64> into tensor<1x400xf64>
+  %52 = tensor.empty() : tensor<400x600xf64>
+  %53 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_11 : tensor<600x400xf64>) outs(%52 : tensor<400x600xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<400x600xf64>
+  %54 = tensor.empty() : tensor<1x600xf64>
+  %55 = linalg.fill ins(%cst_0 : f64) outs(%54 : tensor<1x600xf64>) -> tensor<1x600xf64>
+  %56 = linalg.matmul ins(%collapsed_34, %53 : tensor<1x400xf64>, tensor<400x600xf64>) outs(%55 : tensor<1x600xf64>) -> tensor<1x600xf64>
+  %57 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%56 : tensor<1x600xf64>) outs(%54 : tensor<1x600xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x600xf64>
+  %58 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%57, %cst_12 : tensor<1x600xf64>, tensor<600xf64>) outs(%54 : tensor<1x600xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x600xf64>
+  %expanded_35 = tensor.expand_shape %58 [[0], [1, 2]] output_shape [1, 1, 600] : tensor<1x600xf64> into tensor<1x1x600xf64>
+  %59 = tensor.empty() : tensor<1x1x600xf64>
+  %60 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%expanded_35 : tensor<1x1x600xf64>) outs(%59 : tensor<1x1x600xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.cmpf ugt, %in, %cst_0 : f64
+    %81 = arith.select %80, %in, %cst_0 : f64
+    linalg.yield %81 : f64
+  } -> tensor<1x1x600xf64>
+  %collapsed_36 = tensor.collapse_shape %60 [[0], [1, 2]] : tensor<1x1x600xf64> into tensor<1x600xf64>
+  %61 = tensor.empty() : tensor<600x600xf64>
+  %62 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_13 : tensor<600x600xf64>) outs(%61 : tensor<600x600xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<600x600xf64>
+  %63 = linalg.matmul ins(%collapsed_36, %62 : tensor<1x600xf64>, tensor<600x600xf64>) outs(%55 : tensor<1x600xf64>) -> tensor<1x600xf64>
+  %64 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%63 : tensor<1x600xf64>) outs(%54 : tensor<1x600xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x600xf64>
+  %65 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%64, %cst_14 : tensor<1x600xf64>, tensor<600xf64>) outs(%54 : tensor<1x600xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x600xf64>
+  %expanded_37 = tensor.expand_shape %65 [[0], [1, 2]] output_shape [1, 1, 600] : tensor<1x600xf64> into tensor<1x1x600xf64>
+  %66 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%expanded_37 : tensor<1x1x600xf64>) outs(%59 : tensor<1x1x600xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.cmpf ugt, %in, %cst_0 : f64
+    %81 = arith.select %80, %in, %cst_0 : f64
+    linalg.yield %81 : f64
+  } -> tensor<1x1x600xf64>
+  %collapsed_38 = tensor.collapse_shape %66 [[0], [1, 2]] : tensor<1x1x600xf64> into tensor<1x600xf64>
+  %67 = tensor.empty() : tensor<600x161xf64>
+  %68 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>], iterator_types = ["parallel", "parallel"]} ins(%cst_15 : tensor<161x600xf64>) outs(%67 : tensor<600x161xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<600x161xf64>
+  %69 = tensor.empty() : tensor<1x161xf64>
+  %70 = linalg.fill ins(%cst_0 : f64) outs(%69 : tensor<1x161xf64>) -> tensor<1x161xf64>
+  %71 = linalg.matmul ins(%collapsed_38, %68 : tensor<1x600xf64>, tensor<600x161xf64>) outs(%70 : tensor<1x161xf64>) -> tensor<1x161xf64>
+  %72 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%71 : tensor<1x161xf64>) outs(%69 : tensor<1x161xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x161xf64>
+  %73 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%72, %cst_16 : tensor<1x161xf64>, tensor<161xf64>) outs(%69 : tensor<1x161xf64>) {
+  ^bb0(%in: f64, %in_41: f64, %out: f64):
+    %80 = arith.addf %in, %in_41 : f64
+    linalg.yield %80 : f64
+  } -> tensor<1x161xf64>
+  %expanded_39 = tensor.expand_shape %73 [[0], [1, 2]] output_shape [1, 1, 161] : tensor<1x161xf64> into tensor<1x1x161xf64>
+  %74 = tensor.empty() : tensor<1x1x161xf64>
+  %75 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (0, 0, d2)>, affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%expanded_39 : tensor<1x1x161xf64>) outs(%74 : tensor<1x1x161xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    %80 = arith.negf %in : f64
+    %81 = math.exp %80 : f64
+    %82 = arith.addf %81, %cst : f64
+    %83 = arith.divf %cst, %82 : f64
+    linalg.yield %83 : f64
+  } -> tensor<1x1x161xf64>
+  %76 = tensor.empty() : tensor<1x161x1xf64>
+  %77 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d2, d1)>], iterator_types = ["parallel", "parallel", "parallel"]} ins(%75 : tensor<1x1x161xf64>) outs(%76 : tensor<1x161x1xf64>) {
+  ^bb0(%in: f64, %out: f64):
+    linalg.yield %in : f64
+  } -> tensor<1x161x1xf64>
+  %expanded_40 = tensor.expand_shape %77 [[0], [1, 2], [3]] output_shape [1, 1, 161, 1] : tensor<1x161x1xf64> into tensor<1x1x161x1xf64>
+  util.global.store %30, @_state1.global : tensor<1x1x400xf64>
+  util.global.store %50, @_state2.global : tensor<1x1x400xf64>
+  %78 = hal.tensor.barrier join(%expanded_40 : tensor<1x1x161x1xf64>) => %arg2 : !hal.fence
+  %79 = hal.tensor.export %78 : tensor<1x1x161x1xf64> -> !hal.buffer_view
+  util.return %79 : !hal.buffer_view
+}
+
+[7/16] Building C object samples/nsnet2/CMakeFiles/NsNet2LLVM.dir/NsNet2LLVM.c.obj
+[8/16] Building C object samples/nsnet2/CMakeFiles/nsnet2_llvm.dir/nsnet2_llvm/nsnet2_llvm_module.c.obj
+[9/16] Linking C static library samples/nsnet2/libnsnet2_llvm.a
+[10/16] Generating big_matvec/big_matvec_module.h, big_matvec/big_matvec.o, big_matvec/big_matvec.h, big_matvec/big_matvec_llvm.h
+[11/16] Building C object samples/big_matvec/CMakeFiles/big_matvec.dir/big_matvec/big_matvec_module.c.obj
+[12/16] Building C object samples/big_matvec/CMakeFiles/big_matvec_sample.dir/main.c.obj
+[13/16] Linking C static library samples/big_matvec/libbig_matvec.a
+[14/16] Linking C executable samples/vec_multiply/vec_multiply
+[15/16] Linking C executable samples/nsnet2/NsNet2LLVM
+[16/16] Linking C executable samples/big_matvec/big_matvec_sample
+[6/8] No install step for 'runtime'
+[6/8] No test step for 'runtime'
+[8/8] Completed 'runtime'
