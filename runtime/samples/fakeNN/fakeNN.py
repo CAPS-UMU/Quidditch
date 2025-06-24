@@ -24,6 +24,9 @@ spec_size = n_fft // 2 + 1
 parser = argparse.ArgumentParser(prog='iree-turbine')
 parser.add_argument('output', nargs='?')
 parser.add_argument('--frames', dest='frames', metavar='N', type=int, default=1, nargs='?')
+parser.add_argument('--m', dest='mDim', metavar='Mdim', type=int, default=1, nargs='?')
+parser.add_argument('--n', dest='nDim', metavar='Ndim', type=int, default=1, nargs='?')
+parser.add_argument('--k', dest='kDim', metavar='Kdim', type=int, default=1, nargs='?')
 parser.add_argument('--dtype', dest='dtype', metavar='F', choices=['f32', 'f64'], default='f32')
 parser.add_argument('-dump', dest='dump', action='store_true', default=False)
 args = parser.parse_args()
@@ -39,49 +42,24 @@ dtype = name_to_dtype[args.dtype]
 # cmake generates a static linked library for the module called
 # compiled_fake_n_n_linked_llvm_cpu_library_query etc.
 class FakeNN(nn.Module):
-    def __init__(self, n_features, hidden_1, hidden_2, hidden_3):
+    def __init__(self, n_features, hidden_1):
         super().__init__()
         self.n_features = n_features
         self.hidden_1 = hidden_1
-        self.hidden_2 = hidden_2
-        self.hidden_3 = hidden_3
         # fc1
         self.fc1 = nn.Linear(n_features, hidden_1, dtype=dtype)
-        # rnn
-        self.rnn1 = nn.GRU(input_size=hidden_1, hidden_size=hidden_2, num_layers=1, batch_first=True, dtype=dtype)
-        self.rnn2 = nn.GRU(input_size=hidden_2, hidden_size=hidden_2, num_layers=1, batch_first=True, dtype=dtype)
-        # fc2
-        self.fc2 = nn.Linear(hidden_2, hidden_3, dtype=dtype)
-        # fc3
-        self.fc3 = nn.Linear(hidden_3, hidden_3, dtype=dtype)
-        # fc4
-        self.fc4 = nn.Linear(hidden_3, n_features, dtype=dtype)
         # other
         self.eps = 1e-9
 
-    def forward(self, stft_noisy, *state_in):
-        mask_pred, *state_out = self._forward(stft_noisy, *state_in)
-        return mask_pred, *state_out
+    def forward(self, stft_noisy):
+        out = self._forward(stft_noisy)
+        return out
 
-    def _forward(self, stft_noisy, *state_in):
-    #    print("we are inside the foward function")
+    def _forward(self, stft_noisy):
         x = self.fc1(stft_noisy)
-        state_out = [*state_in]
-        x, state_out[0] = self.rnn1(x, state_in[0])
-        x, state_out[1] = self.rnn2(x, state_in[1])
-        x = self.fc2(x)
-        x = nn.functional.relu(x)
-        x = self.fc3(x)
-        x = nn.functional.relu(x)
-        x = self.fc4(x)
-        x = torch.sigmoid(x)
-        # sort shape
-        mask_pred = x.permute(0, 2, 1).unsqueeze(1)
-  #      print(f'inside the forward funcion, about to return{state_out}')
-        return mask_pred, *state_out
+        return x
 
-
-model = FakeNN(n_features=spec_size, hidden_1=400, hidden_2=400, hidden_3=600)
+model = FakeNN(n_features=args.kDim, hidden_1=args.nDim)
 model.train(False)
 
 
@@ -91,87 +69,44 @@ def with_frames(n_frames):
     # use camel case starting with a capital letter, and remember that given a name like FakeNN,
     # cmake generates a static linked library for the module called
     # compiled_fake_n_n_linked_llvm_cpu_library_query etc.
+    print(f'it looks like the shape of input for withFrames is {aot.AbstractTensor(*size, dtype=dtype)}')
     class CompiledFakeNN(aot.CompiledModule):
-        # Make the hidden state globals that persist as long as the IREE session does.
-        state1 = aot.export_global(torch.zeros(1, 1, 400, dtype=dtype), mutable=True, uninitialized=False)
-        state2 = aot.export_global(torch.zeros(1, 1, 400, dtype=dtype), mutable=True, uninitialized=False)
         def main(self, x=aot.AbstractTensor(*size, dtype=dtype)):
-            y, out1, out2 = aot.jittable(model.forward)(
-                x, self.state1, self.state2,
+            y= aot.jittable(model.forward)(
+                x,
                 constraints=[]
             )
-            self.state1 = out1
-            self.state2 = out2
             return y
 
     return CompiledFakeNN
 
-
-exported = aot.export(with_frames(n_frames=args.frames))
+# I'm not sure what Markus meant by n_frames, but it appears
+# that n_frames is equivalent to the M dimension (row dimension) of the input.
+exported = aot.export(with_frames(n_frames=args.mDim))
 if args.dump:
     exported.print_readable()
 else:
     exported.save_mlir(args.output)
-    # everything after this point are Emily's notes!!!
-    #  double(*data)[161] = aligned_alloc(64, 161 * sizeof(double));
-
-    # for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
-    #     (*data)[i] = (i + 1);
-    # }
-    # exported.save_mlir("/home/hoppip/Quidditch/runtime/samples/grapeFruit/theMLIR.mlir")
-    np_dtype = np.float32
-    if dtype == torch.float64:
-        np_dtype = np.float64
-        print("yodelaheyyyhoooooooo")
-    blah = np.full((1,1, 161), 7,dtype=np_dtype)
-    blah = np.array([[list([i+1 for i in range (0,161)])]],dtype=np_dtype)
-    state1 = torch.zeros(1, 1, 400, dtype=dtype)
-    state2 = torch.zeros(1, 1, 400, dtype=dtype)
-    result_tuple= model(torch.from_numpy(blah),state1,state2)
-    print("YODEL")
-  #  print(result_tuple)
-    print(f"Model structure: {model}\n\n")
-
-    # for name, param in model.named_parameters():
-    #     print(f"Layer: {name} | Size: {param.size()} | Values : {param[:2]} \n")
-    # print("inspecting model.rnn1...")
-    # print(model.rnn1)
-    # print(model.rnn1.state_dict())
-    # print(model.rnn1._all_weights)
-    # print(model.rnn1.state_dict()['weight_ih_l0'])
-    # for nm in model.rnn1.state_dict():
-    #    tens = model.rnn1.state_dict()[nm]
-    #    print(f'{nm} has a tensor of size {tens.shape}')
-
-    print("YOHOHO")
-    m = nn.Linear(400, 1200)
-    for nm in m.state_dict():
-       tens = m.state_dict()[nm]
-       print(f'{nm} has a tensor of size {tens.shape}')
-    input = torch.randn(1,400)
-    #print(input)
-    print(f'input has shape {input.shape} and size {input.size()}')
-    output = m(input)
-    print(f'output has shape {output.shape} and size {output.size()}')
-       #print(f'hoodley: {hoodle}')
-   
-    # print([i+1 for i in range (0,161)])
-    #print(f'y is {y}')
-    #model(torch.Tensor(blah, dtype=dtype))
-    #input_batch = input_tensor.unsqueeze(0)
-
-# THE FOLLOWING CODE RUNS THE NsNet2 NN IN PYTHON!!
+    # everything after this point are Emily's notes!!! 
+    # print(f'spec_size is {spec_size}')
+    # print(f'M:{args.mDim} N:{args.nDim} K:{args.kDim}')
+    # size = (1,1,model.n_features)
+    # print(f'input is {aot.AbstractTensor(*size, dtype=dtype)}')
+    # print(f"Model structure: {model}\n")
+    # for nm in model.state_dict():
+    #     print("\t",end='')
+    #     print(f'{nm} has shape {model.state_dict()[nm].shape}')
+    
+    # I think n_frames is the M dimension!!!!
+    # print("\nRunning FakeNN with example input...")
     # np_dtype = np.float32
     # if dtype == torch.float64:
     #     np_dtype = np.float64
-    #     print("yodelaheyyyhoooooooo")
-    # blah = np.full((1,1, 161), 7,dtype=np_dtype)
-    # blah = np.array([[list([i+1 for i in range (0,161)])]],dtype=np_dtype)
-    # state1 = torch.zeros(1, 1, 400, dtype=dtype)
-    # state2 = torch.zeros(1, 1, 400, dtype=dtype)
-    # result_tuple= model(torch.from_numpy(blah),state1,state2)
+    # exInput = np.full((args.mDim, args.kDim), 7,dtype=np_dtype)
+    # exInput = np.array([[list([i+1 for i in range (0,args.kDim)])]],dtype=np_dtype)
+    # exInput = torch.from_numpy(exInput)
+    # print(f'shape of input: {exInput.shape}')
+    # result= model(exInput)
     # print("YODEL")
-    # print(result_tuple)
-# https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html
-# https://docs.pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
-# https://docs.kanaries.net/topics/Python/nn-linear
+    # print(result[0])
+    # print(f'shape of output: {result[0].shape}')
