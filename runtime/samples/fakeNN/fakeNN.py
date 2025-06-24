@@ -64,7 +64,7 @@ class FakeNN(nn.Module):
         return mask_pred, *state_out
 
     def _forward(self, stft_noisy, *state_in):
-        print("we are inside the foward function")
+    #    print("we are inside the foward function")
         x = self.fc1(stft_noisy)
         state_out = [*state_in]
         x, state_out[0] = self.rnn1(x, state_in[0])
@@ -77,12 +77,11 @@ class FakeNN(nn.Module):
         x = torch.sigmoid(x)
         # sort shape
         mask_pred = x.permute(0, 2, 1).unsqueeze(1)
-        print(f'inside the forward funcion, about to return{state_out}')
+  #      print(f'inside the forward funcion, about to return{state_out}')
         return mask_pred, *state_out
 
 
 model = FakeNN(n_features=spec_size, hidden_1=400, hidden_2=400, hidden_3=600)
-#print(model)
 model.train(False)
 
 
@@ -130,11 +129,32 @@ else:
     state2 = torch.zeros(1, 1, 400, dtype=dtype)
     result_tuple= model(torch.from_numpy(blah),state1,state2)
     print("YODEL")
-    print(result_tuple)
+  #  print(result_tuple)
     print(f"Model structure: {model}\n\n")
 
-    for name, param in model.named_parameters():
-        print(f"Layer: {name} | Size: {param.size()} | Values : {param[:2]} \n")
+    # for name, param in model.named_parameters():
+    #     print(f"Layer: {name} | Size: {param.size()} | Values : {param[:2]} \n")
+    # print("inspecting model.rnn1...")
+    # print(model.rnn1)
+    # print(model.rnn1.state_dict())
+    # print(model.rnn1._all_weights)
+    # print(model.rnn1.state_dict()['weight_ih_l0'])
+    # for nm in model.rnn1.state_dict():
+    #    tens = model.rnn1.state_dict()[nm]
+    #    print(f'{nm} has a tensor of size {tens.shape}')
+
+    print("YOHOHO")
+    m = nn.Linear(400, 1200)
+    for nm in m.state_dict():
+       tens = m.state_dict()[nm]
+       print(f'{nm} has a tensor of size {tens.shape}')
+    input = torch.randn(1,400)
+    #print(input)
+    print(f'input has shape {input.shape} and size {input.size()}')
+    output = m(input)
+    print(f'output has shape {output.shape} and size {output.size()}')
+       #print(f'hoodley: {hoodle}')
+   
     # print([i+1 for i in range (0,161)])
     #print(f'y is {y}')
     #model(torch.Tensor(blah, dtype=dtype))
