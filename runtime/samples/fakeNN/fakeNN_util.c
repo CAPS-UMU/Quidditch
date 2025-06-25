@@ -26,10 +26,17 @@ int run_fakeNN_experiment(
     iree_hal_executable_library_query_fn_t implementation) {
   if (!snrt_is_dm_core()) return quidditch_dispatch_enter_worker_loop();
 
-  double(*data)[161] = aligned_alloc(64, 161 * sizeof(double));
+  double(*inputData)[2*40] = aligned_alloc(64, (2*40) * sizeof(double));
+  double(*outputData)[2*120] = aligned_alloc(64, (2*120) * sizeof(double));
+    
+  // initialize input data
+  for (int i = 0; i < IREE_ARRAYSIZE(*inputData); i++) {
+    (*inputData)[i] = (i + 1);
+  }
 
-  for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
-    (*data)[i] = (i + 1);
+  // initialize output data to all zeros
+  for (int i = 0; i < IREE_ARRAYSIZE(*outputData); i++) {
+    (*outputData)[i] = 0;
   }
 
   model_config_t config = {
@@ -41,22 +48,22 @@ int run_fakeNN_experiment(
       .element_type = IREE_HAL_ELEMENT_TYPE_FLOAT_64,
 
       .num_inputs = 1,
-      .input_data = (const void *[]){data, data},
-      .input_sizes = (const iree_host_size_t[]){IREE_ARRAYSIZE(*data)},
+      .input_data = (const void *[]){inputData, inputData},
+      .input_sizes = (const iree_host_size_t[]){IREE_ARRAYSIZE(*inputData)},
       .input_ranks = (const iree_host_size_t[]){3},
-      .input_shapes = (const iree_hal_dim_t *[]){(iree_hal_dim_t[]){1, 1, 161}},
+      .input_shapes = (const iree_hal_dim_t *[]){(iree_hal_dim_t[]){1, 2, 40}},
 
       .num_outputs = 1,
-      .output_data = (void *[]){data},
-      .output_sizes = (const iree_host_size_t[]){IREE_ARRAYSIZE(*data)},
+      .output_data = (void *[]){outputData},
+      .output_sizes = (const iree_host_size_t[]){IREE_ARRAYSIZE(*outputData)},
   };
 
   unsigned long cycles = snrt_mcycle();
   IREE_CHECK_OK(run_model(&config));
   unsigned long cycles_after = snrt_mcycle();
 
-  for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
-    double value = (*data)[i];
+  for (int i = 0; i < IREE_ARRAYSIZE(*outputData); i++) {
+    double value = (*outputData)[i];
     printf("%f\n", value);
   }
 
@@ -73,6 +80,7 @@ int run_fakeNN_experiment(
   
 
   printf("\ncycles %lu\n", cycles_after - cycles);
-  free(data);
+  free(inputData);
+  free(outputData);
   return 0;
 }

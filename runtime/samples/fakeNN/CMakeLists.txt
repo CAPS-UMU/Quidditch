@@ -1,4 +1,4 @@
-iree_turbine(SRC fakeNN.py DST ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DTYPE "f64" M 1 N 120 K 40)
+iree_turbine(SRC fakeNN.py DST ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DTYPE "f64" M 2 N 120 K 40)
 quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DST fakeNN FLAGS --mlir-disable-threading --iree-quidditch-export-costs=/home/hoppip/Quidditch/runtime/samples/fakeNN/fakeNN-tile-sizes-costs.txt --iree-quidditch-import-tiles=/home/hoppip/Quidditch/runtime/samples/fakeNN/fakeNN-tile-sizes.json)
 quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc LLVM DST fakeNN_llvm FLAGS --iree-quidditch-export-costs=/home/hoppip/Quidditch/runtime/samples/fakeNN/fakeNN-tile-sizes-costs.txt --iree-quidditch-import-tiles=/home/hoppip/Quidditch/runtime/samples/fakeNN/fakeNN-tile-sizes.json)
 add_library(fakeNN_util fakeNN_util.c)
