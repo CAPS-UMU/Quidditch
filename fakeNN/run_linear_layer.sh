@@ -20,20 +20,41 @@ echo "processing each point in the search space $basename"
 uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
 dimsRegex='([0-9]*|[x]*|[w]*|[-]*)*^(([0-9]*),([0-9]*),([0-9]*)),([0-9]*),([0-9]*),([0-9]*),'
 inputSizeRegex='(([0-9]*)x)|([0-9]*)w'
+hoodle='^([0-9])x([0-9]*|[x]*|[w]*|[-]*)*'
+eatNum='^([0-9])([0-9])*'
 for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
         do
-        # experimentResults="$here/$scrapeName/$ts/run_output.txt"
-        # res=$(ls $experimentResults 2>/dev/null)
-        # if [[ $experimentResults == $res ]]; 
-        #     then 
-        #     existingExperiments+=("$experimentResults")
-        #     else
-        #     missingExperiments+=("$experimentResults")
-        # fi
-        echo "Processing $ts..."
+        echo "Generating source files for $ts..."
+        eatNum='^([0-9])([0-9])*'
+        M=$(echo $ts | grep -oE $eatNum)
+        tail=${ts#*x}
+        N=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*x}
+        K=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*w}
+        m=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*-}
+        n=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*-}
+        k=$(echo $tail | grep -oE $eatNum)
+        echo "$M"
+        echo "$N"
+        echo "$K"
+        echo "$m"
+        echo "$n"
+        echo "$k"
+        dispatchNameTemplate="main\$async_dispatch_0_matmul_transpose_b_MxNxK_f64"
+        dispatchName="${dispatchNameTemplate/MxNxK/"$M"x"$N"x"$K"}"
+        echo "so the dispatch name is $dispatchName"
         # dims=$(echo $ts | grep -oE $dimsRegex) 
         # echo $dims
-        echo "$ts" | grep -oE $dimsRegex
+        # parts=(${(s/x/)$ts})
+        # echo "$parts"
+       # echo b=${ts:12:5}
+        #a="56xhoodle"
+        #echo ${ts#*x} 
+        #echo "56xhoodle" | grep -oE $eatNum
+        #echo "$ts" | grep -oE $dimsRegex
 done
 
 
