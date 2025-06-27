@@ -42,3 +42,8 @@ sh run_experiment.sh 1 1200 400 "case1_searchSpace.csv" case_1 genJsons compile 
 - runs the fakeNN executable for each of the specified tiling schemes
 
 - exports the results to a CSV
+
+## make a new script run-linear-layer.sh
+
+only the subscript scrapeGrapeFruits.sh cares about the dispatchName! we only need the dispatchName to add it to a CSV file...
+
