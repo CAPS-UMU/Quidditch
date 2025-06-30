@@ -11,7 +11,7 @@ jsonOutputDir=$6
 fakeNNDir=$7
 templates=$8
 fakeNNExec=$9
-correctness=${10}
+verilator=${10}
 # constants defined by script, according to what I have in fakeNN right now
 origCosts="fakeNN-tile-sizes-costs" # (.txt)
 origScheme="fakeNN-tile-sizes"      # (.json)
@@ -19,48 +19,6 @@ origHeader="fakeNN_util"            # (.h)
 # constant defined by script, according to the templates folder contents
 cmakeEpilog="CMakeLists-epilog"
 cHeaderProlog="fakeNN_util-prolog"
-
-# gen_cmakelists_and_source HELPER FUNCTION
-# generate cmakelists.txt and C header file given 
-# 1. the tile sizes json file basename
-# 2. directory in which to save the cmakelists.txt file (do NOT use a relative path!)
-# 3. tile size costs txt file basename
-# 4. C header file basename
-gen_cmakelists_and_source(){
-    # echo ""
-    echo "HELLO: tile scheme file is $1"
-    echo "HELLO: directory from which to pull tile scheme from is $2"
-    echo "HELLO: directory to save in is $3"
-    jsons=$2
-    out=$3
-    ts=$1
-    echo "HELLO: M=$4, N=$5, K=$6, m=$7, n=$8, k=$9."
-    if [[ "$ts" == "original" ]]; 
-    then 
-        # restore set up for 2x120x40 with tile sizes 0-0-60
-        cp "$templates/$origScheme.json" "$out/$origScheme.json" 
-        cp "$templates/$origCosts.json" "$out/$origCosts.json" 
-        cp "$templates/CMakeLists.txt" "$out/CMakeLists.txt"
-        cp "$templates/$origHeader.h" "$out/$origHeader.h"
-    else
-        # copy custom tile sizes, costs, CMakeLists.txt and C header into destination
-        importTiles="$out/$origScheme.json" 
-        exportCosts="$out/$origCosts.txt"
-        # cp source destination
-        cp "$jsons/$ts.json" $importTiles           # copy tile sizes
-        cp "$templates/$origCosts.txt" $exportCosts # copy tile costs (not really used)
-        # create custom CMakeLists.txt
-        echo "iree_turbine(SRC fakeNN.py DST \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DTYPE \"f64\" M "$M" N "$N" K "$K")" > "$out/CMakeLists.txt"
-        echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DST fakeNN FLAGS --mlir-disable-threading --iree-quidditch-time-disp=fakenn"$M"x"$N"x"$K" --iree-quidditch-export-costs=$exportCosts --iree-quidditch-import-tiles=$importTiles)" >> "$out/CMakeLists.txt"
-        echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc LLVM DST fakeNN_llvm FLAGS --iree-quidditch-time-disp=fakenn"$M"x"$N"x"$K" --iree-quidditch-export-costs=$exportCosts --iree-quidditch-import-tiles=$importTiles)" >> "$out/CMakeLists.txt"
-        cat "$templates/$cmakeEpilog.txt" >> "$out/CMakeLists.txt"
-        # create custom C header
-        cat "$templates/$cHeaderProlog.h" > "$out/$origHeader.h"
-        echo "#define mDim $M" >> "$out/$origHeader.h"
-        echo "#define nDim $N" >> "$out/$origHeader.h"
-        echo "#define kDim $K" >> "$out/$origHeader.h"
-   fi
-}
 
 ## this script requires a search space csv file
 res=$(ls $searchSpaceCSV 2>/dev/null)
@@ -97,33 +55,13 @@ fi
 uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
 eatNum='^([0-9])([0-9])*'
 # check build status of entry requested by CSV
-if [[ "$correctness" == "correctness" ]];
-    then
-        # check whether each run was successful
-        for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
-            do
-            eatNum='^([0-9])([0-9])*'
-            M=$(echo $ts | grep -oE $eatNum)
-            tail=${ts#*x}
-            N=$(echo $tail | grep -oE $eatNum)
-            tail=${tail#*x}
-            K=$(echo $tail | grep -oE $eatNum)
-            tail=${tail#*w}
-            m=$(echo $tail | grep -oE $eatNum)
-            tail=${tail#*-}
-            n=$(echo $tail | grep -oE $eatNum)
-            tail=${tail#*-}
-            k=$(echo $tail | grep -oE $eatNum)
-            golden=$(echo "$M""x""$N""x""$K""w0-0-0")
-            echo -e "\trun.sh: checking $ts vs $golden..."
-            output="$finalOutputDir/$ts/run_output.txt"
-            goldenOutput="$goldenOutputDir/$golden/run_output.txt"
-            diff $output $goldenOutput
-        done
-    else
+batchSize=5
+counter=0
         # build each entry requested by CSV
         for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
                 do
+                counter=$((counter+1))
+               # echo "counter is $counter"
                 eatNum='^([0-9])([0-9])*'
                 M=$(echo $ts | grep -oE $eatNum)
                 tail=${ts#*x}
@@ -137,69 +75,84 @@ if [[ "$correctness" == "correctness" ]];
                 tail=${tail#*-}
                 k=$(echo $tail | grep -oE $eatNum)
                 golden=$(echo "$M""x""$N""x""$K""w0-0-0")
-                # if build does not exist, create files and build
-                buildOutputFile="$finalOutputDir/$ts/CMakeLists.txt"
-                res=$(ls $buildOutputFile 2>/dev/null)
-                if [[ $buildOutputFile != $res ]]; 
-                then 
-                    echo -e "\trun.sh: creating build for $ts"
-                    myBuildDir="$finalOutputDir/$ts"
-                    rm -r -f $myBuildDir 2> /dev/null
-                    mkdir $myBuildDir
-                    gen_cmakelists_and_source $ts $jsonOutputDir $fakeNNDir $M $N $K $m $n $k
-                    # save a copy of the build
-                    cp "$fakeNNDir/CMakeLists.txt" "$fakeNNDir/$origHeader.h" "$fakeNNDir/$origScheme.json" "$fakeNNDir/$origCosts.txt" -t $myBuildDir
-                    # actually build
-                    cd $buildDir
-                    cmake .. -GNinja \
-                    -DCMAKE_C_COMPILER=clang \
-                    -DCMAKE_CXX_COMPILER=clang++ \
-                    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                    -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$fakeNNDir/cmakeOutput.txt"
-                    ninja -j 20 &> "$fakeNNDir/buildOutput.txt"
-                    grep "kernel does not fit into L1 memory and cannot be compiled" "$fakeNNDir/buildOutput.txt"
-                    grep "Troublesome file path is" "$fakeNNDir/buildOutput.txt"
+                # if run_output DNE, run the entry
+                runOutputFile="$finalOutputDir/$ts/run_output.txt"
+                myExec="$finalOutputDir/$ts/FakeNN"
+                myOutputDir="$finalOutputDir/$ts"
+                res=$(ls $runOutputFile 2>/dev/null)
+                #echo "res is $res"
+                # if [[ $runOutputFile != $res ]]; 
+                # then 
+                    echo -e "\trun.sh: getting run output for $ts"
+                    #(cd $myOutputDir; $verilator $myExec > "$runOutputFile") &
+                    cd $verilator
+                    echo "myExec is $myExec"
+                    echo "runOutputFile is $runOutputFile"
+                    # ./snitch_cluster.vlt "$myExec" &> "$runOutputFile" &
+                    # (sleep 2; echo "hoodle" &> "$runOutputFile" )&
+                    (./snitch_cluster.vlt "$myExec" > "$runOutputFile")&
+                    wait
+                    # wait
                     cd $here
-                    # save a copy of the cmake and ninja build output
-                    cp "$fakeNNDir/cmakeOutput.txt" "$fakeNNDir/buildOutput.txt" -t $myBuildDir
-                    # save a copy of the generated executable
-                    cp  "$fakeNNExec" -t $myBuildDir
-                else
-                    echo -e "\trun.sh: using cached build for $ts"
-                fi
-                # if golden build does not exist, create golden files and build
-                goldenOutputFile="$goldenOutputDir/$golden/CMakeLists.txt"
-                res=$(ls $goldenOutputFile 2>/dev/null)
-                if [[ $goldenOutputFile != $res ]]; 
-                then 
-                    echo -e "\trun.sh: creating golden build for $golden"
-                    myBuildDir="$goldenOutputDir/$golden"
-                    rm -r -f $myBuildDir 2> /dev/null
-                    mkdir $myBuildDir
-                    gen_cmakelists_and_source $golden $goldenJsonOutputDir $fakeNNDir $M $N $K 0 0 0
-                    cp "$fakeNNDir/CMakeLists.txt" "$fakeNNDir/$origHeader.h" "$fakeNNDir/$origScheme.json" "$fakeNNDir/$origCosts.txt" -t $myBuildDir
-                    # actually build
-                    cd $buildDir
-                    cmake .. -GNinja \
-                    -DCMAKE_C_COMPILER=clang \
-                    -DCMAKE_CXX_COMPILER=clang++ \
-                    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                    -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$fakeNNDir/cmakeOutput.txt"
-                    ninja -j 20 &> "$fakeNNDir/buildOutput.txt"
-                    grep "kernel does not fit into L1 memory and cannot be compiled" "$fakeNNDir/buildOutput.txt"
-                    grep "Troublesome file path is" "$fakeNNDir/buildOutput.txt"
-                    cd $here
-                    # save a copy of the cmake and ninja build output
-                    cp "$fakeNNDir/cmakeOutput.txt" "$fakeNNDir/buildOutput.txt" -t $myBuildDir
-                    # save a copy of the generated executable
-                    cp  "$fakeNNExec" -t $myBuildDir
-                else
-                    echo -e "\trun.sh: using cached golden  build for $golden"
-                fi
+                    # if (( $counter % $batchSize == 0 )); then
+                    # wait
+                    # echo "starting new batch..."
+                    # fi
+                # else
+                #     echo -e "\trun.sh: using cached run output for $ts"
+                # fi
+          
+                # if (( $counter % $batchSize == 0 )); then
+                #     wait
+                #     echo "starting new batch..."
+                # fi
         done
-fi
+# wait
+
+# batchSize=1
+# counter=0
+#         # build each entry requested by CSV
+#         for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
+#                 do
+#                 counter=$((counter+1))
+#                # echo "counter is $counter"
+#                 eatNum='^([0-9])([0-9])*'
+#                 M=$(echo $ts | grep -oE $eatNum)
+#                 tail=${ts#*x}
+#                 N=$(echo $tail | grep -oE $eatNum)
+#                 tail=${tail#*x}
+#                 K=$(echo $tail | grep -oE $eatNum)
+#                 tail=${tail#*w}
+#                 m=$(echo $tail | grep -oE $eatNum)
+#                 tail=${tail#*-}
+#                 n=$(echo $tail | grep -oE $eatNum)
+#                 tail=${tail#*-}
+#                 k=$(echo $tail | grep -oE $eatNum)
+#                 golden=$(echo "$M""x""$N""x""$K""w0-0-0")
+#                 # if golden run_output DNE, run the golden entry
+#                 goldenOutputFile="$goldenOutputDir/$golden/run_output.txt"
+#                 myExec="$goldenOutputDir/$golden/FakeNN"
+#                 myOutputDir="$goldenOutputDir/$golden"
+#                 res=$(ls $goldenOutputFile 2>/dev/null)
+#                 if [[ $goldenOutputFile != $res ]]; 
+#                 then 
+#                     echo -e "\trun.sh: getting run output for $golden"
+#                    cd $verilator
+#                    ./snitch_cluster.vlt $myExec > "$goldenOutputFile" &
+#                    cd $here
+#                    # (. spark-verilator.sh $verilator $myExec $myOutputDir $goldenOutputFile) &
+#                     #(cd $myOutputDir; $verilator $myExec > "$goldenOutputFile") &
+                  
+#                 else
+#                     echo -e "\trun.sh: using cached golden run output for $golden"
+#                 fi
+#                 if (( $counter % $batchSize == 0 )); then
+#                     wait
+#                     echo "starting new batch..."
+#                 fi
+#         done
+# wait
+# echo "done waiting"
 
 # # build each entry requested by CSV
 # for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)

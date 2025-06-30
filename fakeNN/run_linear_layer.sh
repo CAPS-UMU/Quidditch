@@ -9,7 +9,7 @@ goldenJsonOutputDir="$here/linear-layer-search-space/golden-tiling-schemes"
 jsonOutputDir="$here/linear-layer-search-space/tiling-schemes"
 templates="$here/linear-layer-search-space/templates"
 # constants with COMPLETE PATH SPECIFIC TO MY COMPUTER
-quidditchDir="/home/hoppip/Quidditch" # <------------ modify this path with path to YOUR quidditch directory!
+quidditchDir="/home/emily/Quidditch" # <------------ modify this path with path to YOUR quidditch directory!
 # constants with derived from this COMPLETE PATH SPECIFIC TO MY COMPUTER
 buildDir="$quidditchDir/build"
 fakeNNDir="$quidditchDir/runtime/samples/fakeNN"
@@ -62,9 +62,8 @@ fi
 ## run
 if [[ "$runFlag" == "run" ]];
     then
-    echo -e "\nrun_linear_layer.sh: if golden hasn't been run, run golden"
-    echo -e "\nrun_linear_layer.sh: if entry hasn't been run, run it"
-    #sh runGrapefruits.sh $1 $experimentName
+    echo -e "\nrun_linear_layer.sh: RUN each csv entry..."
+    . run.sh $searchSpaceCSV $buildDir $goldenOutputDir $finalOutputDir $goldenJsonOutputDir $jsonOutputDir $fakeNNDir $templates $fakeNNExec $verilator
 fi
 
 
