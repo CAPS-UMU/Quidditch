@@ -68,17 +68,7 @@ int run_fakeNN_experiment(
   }
 
   int i = 0;
-  printf("dispatch 9: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
-  i = 1;
-  printf("dispatch 0: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
-  i = 2;
-  printf("dispatch 7: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
-  i = 3;
-  printf("dispatch 8: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
-  i = 4;
-  printf("dispatch 1: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
-  
-
+  printf("dispatch 0: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]);
   printf("\ncycles %lu\n", cycles_after - cycles);
   free(inputData);
   free(outputData);

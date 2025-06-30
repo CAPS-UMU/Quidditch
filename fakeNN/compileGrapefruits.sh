@@ -1,4 +1,4 @@
-echo "compileGrapefruits.sh: ATTN: Run this script INSIDE directory Quidditch/comparing-tile-sizes/"
+echo -e "\tcompileGrapefruits.sh: ATTN: Run this script INSIDE directory Quidditch/fakeNN/"
 here=$(pwd) # save current directory so we can return to it
 # script-specific constants"
 tileSizes="/home/hoppip/Quidditch/comparing-tile-sizes/tile-sizes-to-test/*.json"

@@ -1,7 +1,7 @@
 
 iree_turbine(SRC NsNet2.py DST ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DTYPE "f64" M 5 N 6 K 7)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2 FLAGS --mlir-disable-threading --iree-quidditch-import-tiles=/home/hoppip/Quidditch/runtime/samples/grapeFruit/markus-tile-sizes.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm FLAGS --iree-quidditch-import-tiles=/home/hoppip/Quidditch/runtime/samples/grapeFruit/markus-tile-sizes.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2 FLAGS --mlir-disable-threading --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/markus-tile-sizes.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm FLAGS --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/markus-tile-sizes.json)
 
 add_library(nsnet2_util nsnet2_util.c)
 target_link_libraries(nsnet2_util

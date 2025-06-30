@@ -77,7 +77,16 @@ def SpecializeDMACodePass : Pass<"quidditch-specialize-dma-code",
     removed while the original version has all DMA transfer operations removed.
     Barriers are inserted where data dependencies require either transfers or
     computations to have finished.
+
+    If the timeDispatch option is enabled, calls to myrtle_record_cycles will be
+    inserted at the beginning and end of the specified "dma" version.
   }];
+
+  let options = [
+    Option<"timeDispatch", "time-dispatch", "std::string", /*default=*/"",
+           "Flag to time a dispatch. \'grapeFruit\' for every NsNet2 dispatch,"
+           " or \'fakennMxNxK\' where M,N,K are integers">
+  ];
 }
 
 def LowerForallOpPass : Pass<"quidditch-lower-forall-op"> {

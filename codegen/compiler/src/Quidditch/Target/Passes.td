@@ -46,7 +46,7 @@ def ConfigureForSnitchPass
 def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionOpInterface"> {
   let summary = "Annotate linalg operations with tile sizes";
   let description = [{
-    Within each iree-defined kernel, annotate the root linalg operation with a tiling schemes (tile sizes + loop interchange).
+    Within each iree-defined kernel, annotate the root linalg operation with a tiling scheme (tile sizes + loop interchange).
 
     Alternatively, if the export option is not empty, export all iree-defined kernels 
     (that contain linalg operations) to a JSON file.

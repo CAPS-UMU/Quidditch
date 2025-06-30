@@ -1,5 +1,5 @@
 # Specify input sizes and tile sizes, and run on the Snitch Cluster!
-![](/home/hoppip/Quidditch/fakeNN/context2.png)
+![](/home/emily/Quidditch/fakeNN/context2.png)
 
 ## Run for a selected input size and a bunch of tile sizes
 
@@ -46,4 +46,24 @@ sh run_experiment.sh 1 1200 400 "case1_searchSpace.csv" case_1 genJsons compile 
 ## make a new script run-linear-layer.sh
 
 only the subscript scrapeGrapeFruits.sh cares about the dispatchName! we only need the dispatchName to add it to a CSV file...
+
+```
+sh run_linear_layer.sh <searchSpace.csv> <genJsons?> <compile?> <run?> <export?>
+```
+
+ex: `. run_linear_layer.sh one-run.csv genJsons compile run export`
+
+
+
+## run with verilator
+
+```
+../toolchain/bin/snitch_cluster.vlt /home/emily/Quidditch/build/runtime/samples/fakeNN/FakeNN
+```
+
+improved command (run form build directory):
+
+```
+../toolchain/bin/snitch_cluster.vlt runtime/samples/fakeNN/FakeNN
+```
 

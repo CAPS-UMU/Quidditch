@@ -84,6 +84,7 @@ struct QuidditchTargetOptions {
   std::string xDSLOptPath;
   std::string toolChainRoot;
   bool assertCompiled = false;
+  std::string timeDispatch = ""; // added for Specialize DMA Code Pass
   std::string importTilingSchemes = ""; // added for Configure Tiles Pass
   std::string exportUntiled = "";       // added for Configure Tiles Pass
   std::string exportCosts = "";       // added for Configure Tiles Pass
@@ -120,6 +121,12 @@ struct QuidditchTargetOptions {
         "iree-quidditch-toolchain-root", toolChainRoot, llvm::cl::cat(category),
         llvm::cl::desc("Path to the root directory of the Quidditch toolchain "
                        "(containing the toolchain file)"));
+    // added for SpecializeDMACode Pass (to record dispatch cycles for myrtle)
+    binder.opt<std::string>(
+        "iree-quidditch-time-disp", timeDispatch,
+        llvm::cl::cat(category),
+        llvm::cl::desc(
+            "Flag to enable timing dispatches for myrtle"));    
     // added for Configure Tiles Pass
     binder.opt<std::string>(
         "iree-quidditch-import-tiles", importTilingSchemes,
@@ -322,7 +329,7 @@ public:
         .addPass(createLinalgGeneralizeNamedOpsPass)
         .addPass(quidditch::createRemoveTrivialLoopsPass);
 
-    modulePassManager.addPass(quidditch::Snitch::createSpecializeDMACodePass());
+    modulePassManager.addPass(quidditch::Snitch::createSpecializeDMACodePass({targetOptions.timeDispatch}));
     FunctionLikeNest(modulePassManager)
         .addPass(quidditch::SnitchDMA::createLegalizeDMAOperationsPass)
         .addPass(createCanonicalizerPass)
