@@ -181,12 +181,12 @@ void SpecializeDMACode::runOnOperation() {
         function);
     removeUnsupportedSpecializedOps<DMACoreSpecializationOpInterface>(clone);
     
-    if (inserted) { // delete later
-      // function->emitWarning()
-      //     << "\nAFTER SpecializeDMACode dump -- This is the rewritten kernel!!!!!\n";
-      clone->emitWarning()
-          << "\nAFTER SpecializeDMACode dump -- This is the cloned DMA thingy!!!!!\n"
-          << "and my time-dispatch flag is " << timeDispatch << "\n";
-    }
+    // if (inserted) { // delete later
+    //   // function->emitWarning()
+    //   //     << "\nAFTER SpecializeDMACode dump -- This is the rewritten kernel!!!!!\n";
+    //   clone->emitWarning()
+    //       << "\nAFTER SpecializeDMACode dump -- This is the cloned DMA thingy!!!!!\n"
+    //       << "and my time-dispatch flag is " << timeDispatch << "\n";
+    // }
   }
 }

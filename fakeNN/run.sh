@@ -1,4 +1,4 @@
-echo -e "\tcompile.sh: ATTN: NEVER run this script directly; Run script run_linear_layer.sh instead."
+echo -e "\trun.sh: ATTN: NEVER run this script directly; Run script run_linear_layer.sh instead."
 # constants derived from present working directory (here)
 here=$(pwd) # save current directory so we can return to it
 # constants derived from user input
@@ -11,7 +11,7 @@ jsonOutputDir=$6
 fakeNNDir=$7
 templates=$8
 fakeNNExec=$9
-status=${10}
+correctness=${10}
 # constants defined by script, according to what I have in fakeNN right now
 origCosts="fakeNN-tile-sizes-costs" # (.txt)
 origScheme="fakeNN-tile-sizes"      # (.json)
@@ -97,9 +97,9 @@ fi
 uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
 eatNum='^([0-9])([0-9])*'
 # check build status of entry requested by CSV
-if [[ "$status" == "status" ]];
+if [[ "$correctness" == "correctness" ]];
     then
-        # check whether each build was successful
+        # check whether each run was successful
         for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
             do
             eatNum='^([0-9])([0-9])*'
@@ -115,16 +115,10 @@ if [[ "$status" == "status" ]];
             tail=${tail#*-}
             k=$(echo $tail | grep -oE $eatNum)
             golden=$(echo "$M""x""$N""x""$K""w0-0-0")
-            echo -e "\tcompile.sh: checking $ts..."
-            myBuildOutput="$finalOutputDir/$ts/buildOutput.txt"
-            #echo "$myBuildOutput"
-            grep "kernel does not fit into L1 memory and cannot be compiled" "$myBuildOutput"
-            grep "Troublesome file path is" "$myBuildOutput"
-            echo -e "\tcompile.sh: checking $golden..."
-            myBuildOutput="$goldenOutputDir/$golden/buildOutput.txt"
-            #echo "$myBuildOutput"
-            grep "kernel does not fit into L1 memory and cannot be compiled" "$myBuildOutput"
-            grep "Troublesome file path is" "$myBuildOutput"
+            echo -e "\trun.sh: checking $ts vs $golden..."
+            output="$finalOutputDir/$ts/run_output.txt"
+            goldenOutput="$goldenOutputDir/$golden/run_output.txt"
+            diff $output $goldenOutput
         done
     else
         # build each entry requested by CSV
@@ -148,7 +142,7 @@ if [[ "$status" == "status" ]];
                 res=$(ls $buildOutputFile 2>/dev/null)
                 if [[ $buildOutputFile != $res ]]; 
                 then 
-                    echo -e "\tcompile.sh: creating build for $ts"
+                    echo -e "\trun.sh: creating build for $ts"
                     myBuildDir="$finalOutputDir/$ts"
                     rm -r -f $myBuildDir 2> /dev/null
                     mkdir $myBuildDir
@@ -172,14 +166,14 @@ if [[ "$status" == "status" ]];
                     # save a copy of the generated executable
                     cp  "$fakeNNExec" -t $myBuildDir
                 else
-                    echo -e "\tcompile.sh: using cached build for $ts"
+                    echo -e "\trun.sh: using cached build for $ts"
                 fi
                 # if golden build does not exist, create golden files and build
                 goldenOutputFile="$goldenOutputDir/$golden/CMakeLists.txt"
                 res=$(ls $goldenOutputFile 2>/dev/null)
                 if [[ $goldenOutputFile != $res ]]; 
                 then 
-                    echo -e "\tcompile.sh: creating golden build for $golden"
+                    echo -e "\trun.sh: creating golden build for $golden"
                     myBuildDir="$goldenOutputDir/$golden"
                     rm -r -f $myBuildDir 2> /dev/null
                     mkdir $myBuildDir
@@ -202,7 +196,7 @@ if [[ "$status" == "status" ]];
                     # save a copy of the generated executable
                     cp  "$fakeNNExec" -t $myBuildDir
                 else
-                    echo -e "\tcompile.sh: using cached golden  build for $golden"
+                    echo -e "\trun.sh: using cached golden  build for $golden"
                 fi
         done
 fi
@@ -228,7 +222,7 @@ fi
 #         res=$(ls $buildOutputFile 2>/dev/null)
 #         if [[ $buildOutputFile != $res ]]; 
 #         then 
-#             echo -e "\tcompile.sh: creating build for $ts"
+#             echo -e "\trun.sh: creating build for $ts"
 #             myBuildDir="$finalOutputDir/$ts"
 #             rm -r -f $myBuildDir 2> /dev/null
 #             mkdir $myBuildDir
@@ -252,14 +246,14 @@ fi
 #             # save a copy of the generated executable
 #             cp  "$fakeNNExec" -t $myBuildDir
 #         else
-#             echo -e "\tcompile.sh: using cached build for $ts"
+#             echo -e "\trun.sh: using cached build for $ts"
 #         fi
 #         # if golden build does not exist, create golden files and build
 #         goldenOutputFile="$goldenOutputDir/$golden/CMakeLists.txt"
 #         res=$(ls $goldenOutputFile 2>/dev/null)
 #         if [[ $goldenOutputFile != $res ]]; 
 #         then 
-#             echo -e "\tcompile.sh: creating golden build for $golden"
+#             echo -e "\trun.sh: creating golden build for $golden"
 #             myBuildDir="$goldenOutputDir/$golden"
 #             rm -r -f $myBuildDir 2> /dev/null
 #             mkdir $myBuildDir
@@ -282,6 +276,6 @@ fi
 #             # save a copy of the generated executable
 #             cp  "$fakeNNExec" -t $myBuildDir
 #         else
-#             echo -e "\tcompile.sh: using cached golden  build for $golden"
+#             echo -e "\trun.sh: using cached golden  build for $golden"
 #         fi
 # done

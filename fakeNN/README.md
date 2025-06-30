@@ -67,3 +67,32 @@ improved command (run form build directory):
 ../toolchain/bin/snitch_cluster.vlt runtime/samples/fakeNN/FakeNN
 ```
 
+## run copy with verilator
+
+```
+toolchain/bin/snitch_cluster.vlt fakeNN/linear-layer-search-space/out/2x120x40w0-0-60/FakeNN
+```
+
+from inside build:
+
+```
+../toolchain/bin/snitch_cluster.vlt /home/hoppip/Quidditch/fakeNN/linear-layer-search-space/out/2x120x40w0-0-60/FakeNN
+```
+
+golden:
+
+```
+toolchain/bin/snitch_cluster.vlt fakeNN/linear-layer-search-space/golden-out/2x120x40w0-0-0/FakeNN
+```
+
+## checking correctness
+
+```
+diff /home/hoppip/Quidditch/fakeNN/linear-layer-search-space/out/2x120x40w0-0-60/run_output.txt /home/hoppip/Quidditch/fakeNN/linear-layer-search-space/golden-out/2x120x40w0-0-0/run_output.txt
+
+```
+
+```
+clear;. run_linear_layer.sh one-run.csv genJsons status correctness export
+```
+
