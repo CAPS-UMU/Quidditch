@@ -126,37 +126,19 @@ if args.dump:
     exported.print_readable()
 else:
     exported.save_mlir(args.output)
-    # everything after this point are Emily's notes!!!
-    #  double(*data)[161] = aligned_alloc(64, 161 * sizeof(double));
+    # emily's notes below vvvvvvvvvvvvvvvvv
+    # np_dtype = np.float32
+    # if dtype == torch.float64:
+    #     np_dtype = np.float64
 
-    # for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
-    #     (*data)[i] = (i + 1);
-    # }
-    # exported.save_mlir("/home/hoppip/Quidditch/runtime/samples/grapeFruit/theMLIR.mlir")
-    np_dtype = np.float32
-    if dtype == torch.float64:
-        np_dtype = np.float64
-    #     print("yodelaheyyyhoooooooo")
-    blah = np.full((1,args.mDim, args.kDim), 7,dtype=np_dtype)
-    state1 = torch.zeros(1, 1, 400, dtype=dtype)
-    state2 = torch.zeros(1, 1, 400, dtype=dtype)
-    result_tuple= model(torch.from_numpy(blah),state1,state2)
-    print("YODEL")
-    print(result_tuple[0])
-    print(result_tuple[0].shape)
-    # print(f"Model structure: {model}\n\n")
+    # blah = np.full((1,args.mDim, args.kDim), 7,dtype=np_dtype)
+    # state1 = torch.zeros(1, 1, 400, dtype=dtype)
+    # state2 = torch.zeros(1, 1, 400, dtype=dtype)
+    # result_tuple= model(torch.from_numpy(blah),state1,state2)
+    # print("YODEL")
+    # print(result_tuple[0])
+    # print(result_tuple[0].shape)
 
-    # for name, param in model.named_parameters():
-    #     print(f"Layer: {name} | Size: {param.size()} | Values : {param[:2]} \n")
-    
-    
-    
-    
-    
-    # print([i+1 for i in range (0,161)])
-    #print(f'y is {y}')
-    #model(torch.Tensor(blah, dtype=dtype))
-    #input_batch = input_tensor.unsqueeze(0)
 
 # THE FOLLOWING CODE RUNS THE NsNet2 NN IN PYTHON!!
     # np_dtype = np.float32

@@ -32,26 +32,26 @@ else:
         jsonPath = f"{sys.argv[2]}/{theName}.json"
         if not os.path.exists(jsonPath):
             print("\t",end='')
-            print(f'writing to {jsonPath}')
+            print(f'generateTileSizeJSONFiles.py: writing to {jsonPath}')
             f = open(jsonPath, "w")   # 'r' for reading and 'w' for writing 
             data[f'{dispatchName}']["tile-sizes"]=[[int(m)], [int(n)], [int(k)]]
             f.write(f"{json.dumps(data)}")
             f.close()
         else:
             print("\t",end='')
-            print(f'using cached {jsonPath}')
+            print(f'generateTileSizeJSONFiles.py: using cached {jsonPath}')
         # if golden ts dne, generate it
         theName=f'{mC}x{nC}x{kC}w{0}-{0}-{0}'
         jsonPath = f"{sys.argv[3]}/{theName}.json"
         if not os.path.exists(jsonPath):
             print("\t",end='')
-            print(f'writing to {jsonPath}')
+            print(f'generateTileSizeJSONFiles.py: writing to {jsonPath}')
             f = open(jsonPath, "w")   # 'r' for reading and 'w' for writing 
             data[f'{dispatchName}']["tile-sizes"]=[[int(0)], [int(0)], [int(0)]]
             f.write(f"{json.dumps(data)}")
             f.close()
         else:
             print("\t",end='')
-            print(f'using cached {jsonPath}')
+            print(f'generateTileSizeJSONFiles.py: using cached {jsonPath}')
    
     

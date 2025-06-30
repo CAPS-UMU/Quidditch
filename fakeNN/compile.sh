@@ -9,35 +9,64 @@ finalOutputDir=$4
 goldenJsonOutputDir=$5
 jsonOutputDir=$6
 fakeNNDir=$7
-
+templates=$8
+# constants defined by script, according to what I have in fakeNN right now
+origCosts="fakeNN-tile-sizes-costs" # (.txt)
+origScheme="fakeNN-tile-sizes"      # (.json)
+origHeader="fakeNN_util"            # (.h)
+# constant defined by script, according to the templates folder contents
+cmakeEpilog="CMakeLists-epilog"
+cHeaderProlog="fakeNN_util-prolog"
 # echo -e "yohoho $1\n $2\n $3\n $4\n $5\n $6\n $7\n"
 # echo "hoodle"
 # ls "$2"
 # echo "hoodle"
 
+# echo "iree_turbine(SRC fakeNN.py DST \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DTYPE "f64" M "$M" N "$N" K "$K")"
+# echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DST fakeNN FLAGS --mlir-disable-threading --iree-quidditch-time-disp=fakenn"$M"x"$N"x"$K" --iree-quidditch-export-costs=$exportCosts --iree-quidditch-import-tiles=$importTiles)"
+# echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc LLVM DST fakeNN_llvm FLAGS --iree-quidditch-time-disp=fakenn"$M"x"$N"x"$K" --iree-quidditch-export-costs=$exportCosts --iree-quidditch-import-tiles=$importTiles)"
 
 
-# generate cmakelists.txt file given 
-# 1. the tile sizes json (as form basename.json)
+# generate cmakelists.txt and C header file given 
+# 1. the tile sizes json file basename
 # 2. directory in which to save the cmakelists.txt file (do NOT use a relative path!)
-# 3. filepath to save the tile size costs (do NOT use a relative path!)
-# gen_cmakelists(){
-#     # echo ""
-#     # echo "tile sizes file is $1"
-#     tile="$tileSizesToTest/$1"
-#     # echo "directory to save in is $2"
-#     if [[ "$1" == "original" ]]; 
-#     then 
-#        cat $prologueFile > "$2/CMakeLists.txt"
-#        cat $middleFile >> "$2/CMakeLists.txt"
-#        cat $epilogueFile >> "$2/CMakeLists.txt"
-#     else
-#        cat $prologueFile > "$2/CMakeLists.txt"
-#        echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-export-costs=$3 --iree-quidditch-import-tiles=$tile)" >> "$2/CMakeLists.txt"
-#        echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-export-costs=$3 --iree-quidditch-import-tiles=$tile)" >> "$2/CMakeLists.txt"
-#        cat $epilogueFile >> "$2/CMakeLists.txt"
-#    fi
-# }
+# 3. tile size costs txt file basename
+# 4. C header file basename
+gen_cmakelists_and_source(){
+    # echo ""
+    echo "HELLO: tile scheme file is $1"
+    echo "HELLO: directory from which to pull tile scheme from is $2"
+    echo "HELLO: directory to save in is $3"
+    jsons=$2
+    out=$3
+    ts=$1
+    echo "HELLO: M=$4, N=$5, K=$6, m=$7, n=$8, k=$9."
+    if [[ "$ts" == "original" ]]; 
+    then 
+        # restore set up for 2x120x40 with tile sizes 0-0-60
+        cp "$templates/$origScheme.json" "$out/$origScheme.json" 
+        cp "$templates/$origCosts.json" "$out/$origCosts.json" 
+        cp "$templates/CMakeLists.txt" "$out/CMakeLists.txt"
+        cp "$templates/$origHeader.h" "$out/$origHeader.h"
+    else
+        # copy custom tile sizes, costs, CMakeLists.txt and C header into destination
+        importTiles="$out/$origScheme.json" 
+        exportCosts="$out/$origCosts.txt"
+        # cp source destination
+        cp "$jsons/$ts.json" $importTiles           # copy tile sizes
+        cp "$templates/$origCosts.txt" $exportCosts # copy tile costs (not really used)
+        # create custom CMakeLists.txt
+        echo "iree_turbine(SRC fakeNN.py DST \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DTYPE \"f64\" M "$M" N "$N" K "$K")" > "$out/CMakeLists.txt"
+        echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DST fakeNN FLAGS --mlir-disable-threading --iree-quidditch-time-disp=fakenn"$M"x"$N"x"$K" --iree-quidditch-export-costs=$exportCosts --iree-quidditch-import-tiles=$importTiles)" >> "$out/CMakeLists.txt"
+        echo "quidditch_module(SRC \${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc LLVM DST fakeNN_llvm FLAGS --iree-quidditch-time-disp=fakenn"$M"x"$N"x"$K" --iree-quidditch-export-costs=$exportCosts --iree-quidditch-import-tiles=$importTiles)" >> "$out/CMakeLists.txt"
+        cat "$templates/$cmakeEpilog.txt" >> "$out/CMakeLists.txt"
+        # create custom C header
+        cat "$templates/$cHeaderProlog.h" > "$out/$origHeader.h"
+        echo "#define mDim $M" >> "$out/$origHeader.h"
+        echo "#define nDim $N" >> "$out/$origHeader.h"
+        echo "#define kDim $K" >> "$out/$origHeader.h"
+   fi
+}
 
 ## this script requires a search space csv file
 res=$(ls $searchSpaceCSV 2>/dev/null)
@@ -87,13 +116,12 @@ fi
 #     exit 0
 # fi
 
-echo -e "\tcompile.sh: generating the cmake files and compiling..."
-echo -e "\tprocessing each point in the search space $basename"
+#echo -e "\tcompile.sh: generating the cmake files and compiling..."
+#echo -e "\tcompile.sh:processing each point in the search space $basename"
 uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
 eatNum='^([0-9])([0-9])*'
 for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
         do
-        echo -e "\tGenerating source files for $ts..."
         eatNum='^([0-9])([0-9])*'
         M=$(echo $ts | grep -oE $eatNum)
         tail=${ts#*x}
@@ -106,24 +134,40 @@ for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
         n=$(echo $tail | grep -oE $eatNum)
         tail=${tail#*-}
         k=$(echo $tail | grep -oE $eatNum)
-        echo -e "\t$M"
-        echo -e "\t$N"
-        echo -e "\t$K"
-        echo -e "\t$m"
-        echo -e "\t$n"
-        echo -e "\t$k"
-        dispatchNameTemplate="main\$async_dispatch_0_matmul_transpose_b_MxNxK_f64"
-        dispatchName="${dispatchNameTemplate/MxNxK/"$M"x"$N"x"$K"}"
-        echo -e "\tso the dispatch name is $dispatchName"
-            # dims=$(echo $ts | grep -oE $dimsRegex) 
-            # echo $dims
-            # parts=(${(s/x/)$ts})
-            # echo "$parts"
-        # echo b=${ts:12:5}
-            #a="56xhoodle"
-            #echo ${ts#*x} 
-            #echo "56xhoodle" | grep -oE $eatNum
-            #echo "$ts" | grep -oE $dimsRegex
+        golden=$(echo "$M""x""$N""x""$K""w0-0-0")
+        # if build does not exist, create files and build
+        buildOutputFile="$finalOutputDir/$ts/output.txt"
+        res=$(ls $buildOutputFile 2>/dev/null)
+        if [[ $buildOutputFile != $res ]]; 
+        then 
+            echo -e "\tcompile.sh: creating build for $ts"
+            myBuildDir="$finalOutputDir/$ts"
+            rm -r -f $myBuildDir 2> /dev/null
+            mkdir $myBuildDir
+            gen_cmakelists_and_source $ts $jsonOutputDir $myBuildDir $M $N $K $m $n $k
+        else
+            echo -e "\tcompile.sh: using cached build for $ts"
+        fi
+        # if golden build does not exist, create golden files and build
+        goldenOutputFile="$goldenOutputDir/$golden/output.txt"
+        res=$(ls $goldenOutputFile 2>/dev/null)
+        if [[ $goldenOutputFile != $res ]]; 
+        then 
+            echo -e "\tcompile.sh: creating golden build for $golden"
+            #gen_cmakelists_and_source $golden $jsonOutputDir $fakeNNDir $M $N $K 0 0 0
+        else
+            echo -e "\tcompile.sh: using cached golden  build for $golden"
+        fi
+        # echo -e "\t$M"
+        # echo -e "\t$N"
+        # echo -e "\t$K"
+        # echo -e "\t$m"
+        # echo -e "\t$n"
+        # echo -e "\t$k"
+        # dispatchNameTemplate="main\$async_dispatch_0_matmul_transpose_b_MxNxK_f64"
+        # dispatchName="${dispatchNameTemplate/MxNxK/"$M"x"$N"x"$K"}"
+        # echo -e "\tso the dispatch name is $dispatchName"
+
 done
 
 

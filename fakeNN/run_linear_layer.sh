@@ -7,6 +7,7 @@ goldenOutputDir="$here/linear-layer-search-space/golden-out"
 finalOutputDir="$here/linear-layer-search-space/out"
 goldenJsonOutputDir="$here/linear-layer-search-space/golden-tiling-schemes"
 jsonOutputDir="$here/linear-layer-search-space/tiling-schemes"
+templates="$here/linear-layer-search-space/templates"
 # constants derived ASSUMING present working directory = Quidditch/fakeNN
 buildDir="../build"
 fakeNNDir="../runtime/samples/fakeNN"
@@ -45,7 +46,7 @@ if [[ "$compileFlag" == "compile" ]];
     ## compile
     #sh compileGrapefruits.sh $1 $experimentName
     echo -e "\nrun_linear_layer.sh: build away!"
-    . compile.sh $searchSpaceCSV $buildDir $goldenOutputDir $finalOutputDir $goldenJsonOutputDir $jsonOutputDir $fakeNNDir
+    . compile.sh $searchSpaceCSV $buildDir $goldenOutputDir $finalOutputDir $goldenJsonOutputDir $jsonOutputDir $fakeNNDir $templates
     
     ## check compilation results
     else if [[ "$compileFlag" == "status" ]];
