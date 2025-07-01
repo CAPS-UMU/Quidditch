@@ -31,7 +31,7 @@ fi
 uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
 eatNum='^([0-9])([0-9])*'
 
-batchSize=5
+batchSize=16
 counter=0
         # run each entry requested by CSV
         for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
@@ -65,24 +65,24 @@ counter=0
                     echo -e "\trun.sh: getting run output for $ts (using cached output)"
                 fi
                 # if golden run_output DNE, run the golden entry
-                goldenOutputFile="$goldenOutputDir/$golden/run_output.txt"
-                File="$goldenOutputDir/$golden/run_output.txt"
-                myExec="$goldenOutputDir/$golden/FakeNN"
-                myOutputDir="$goldenOutputDir/$golden"
-                res=$(ls $goldenOutputFile 2>/dev/null)
-                if [[ $goldenOutputFile != $res ]]; 
-                then
-                    counter=$((counter+1))
-                    echo -e "\trun.sh: getting run output for $golden (golden)"
-                    cd $myOutputDir
-                    nohup "$verilator/snitch_cluster.vlt" "$myExec" &> "$goldenOutputFile" &
-                    cd $here                  
-                else
-                    echo -e "\trun.sh: getting run output for $golden (golden) (using cached output)"
-                fi
-                if (( $counter % $batchSize == 0 )); then
-                    wait &> /dev/null
-                    echo -e "\trun.sh: starting new batch..."
-                fi
+                # goldenOutputFile="$goldenOutputDir/$golden/run_output.txt"
+                # File="$goldenOutputDir/$golden/run_output.txt"
+                # myExec="$goldenOutputDir/$golden/FakeNN"
+                # myOutputDir="$goldenOutputDir/$golden"
+                # res=$(ls $goldenOutputFile 2>/dev/null)
+                # if [[ $goldenOutputFile != $res ]]; 
+                # then
+                #     counter=$((counter+1))
+                #     echo -e "\trun.sh: getting run output for $golden (golden)"
+                #     cd $myOutputDir
+                #     nohup "$verilator/snitch_cluster.vlt" "$myExec" &> "$goldenOutputFile" &
+                #     cd $here                  
+                # else
+                #     echo -e "\trun.sh: getting run output for $golden (golden) (using cached output)"
+                # fi
+                # if (( $counter % $batchSize == 0 )); then
+                #     wait &> /dev/null
+                #     echo -e "\trun.sh: starting new batch..."
+                # fi
         done
 wait &> /dev/null

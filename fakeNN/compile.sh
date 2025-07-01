@@ -197,35 +197,35 @@ if [[ "$status" == "status" ]];
                     echo -e "\tcompile.sh: using cached build for $ts"
                 fi
                 # if golden build does not exist, create golden files and build
-                goldenOutputFile="$goldenOutputDir/$golden/CMakeLists.txt"
-                res=$(ls $goldenOutputFile 2>/dev/null)
-                if [[ $goldenOutputFile != $res ]]; 
-                then 
-                    echo -e "\tcompile.sh: creating golden build for $golden"
-                    myBuildDir="$goldenOutputDir/$golden"
-                    rm -r -f $myBuildDir 2> /dev/null
-                    mkdir $myBuildDir
-                    gen_cmakelists_and_source $golden $goldenJsonOutputDir $fakeNNDir $M $N $K 0 0 0
-                    cp "$fakeNNDir/CMakeLists.txt" "$fakeNNDir/$origHeader.h" "$fakeNNDir/$origScheme.json" "$fakeNNDir/$origCosts.txt" -t $myBuildDir
-                    # actually build
-                    cd $buildDir
-                    cmake .. -GNinja \
-                    -DCMAKE_C_COMPILER=clang \
-                    -DCMAKE_CXX_COMPILER=clang++ \
-                    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                    -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$fakeNNDir/cmakeOutput.txt"
-                    ninja -j 20 &> "$fakeNNDir/buildOutput.txt"
-                    grep "kernel does not fit into L1 memory and cannot be compiled" "$fakeNNDir/buildOutput.txt"
-                    grep "Troublesome file path is" "$fakeNNDir/buildOutput.txt"
-                    cd $here
-                    # save a copy of the cmake and ninja build output
-                    cp "$fakeNNDir/cmakeOutput.txt" "$fakeNNDir/buildOutput.txt" -t $myBuildDir
-                    # save a copy of the generated executable
-                    cp  "$fakeNNExec" -t $myBuildDir
-                else
-                    echo -e "\tcompile.sh: using cached golden  build for $golden"
-                fi
+                # goldenOutputFile="$goldenOutputDir/$golden/CMakeLists.txt"
+                # res=$(ls $goldenOutputFile 2>/dev/null)
+                # if [[ $goldenOutputFile != $res ]]; 
+                # then 
+                #     echo -e "\tcompile.sh: creating golden build for $golden"
+                #     myBuildDir="$goldenOutputDir/$golden"
+                #     rm -r -f $myBuildDir 2> /dev/null
+                #     mkdir $myBuildDir
+                #     gen_cmakelists_and_source $golden $goldenJsonOutputDir $fakeNNDir $M $N $K 0 0 0
+                #     cp "$fakeNNDir/CMakeLists.txt" "$fakeNNDir/$origHeader.h" "$fakeNNDir/$origScheme.json" "$fakeNNDir/$origCosts.txt" -t $myBuildDir
+                #     # actually build
+                #     cd $buildDir
+                #     cmake .. -GNinja \
+                #     -DCMAKE_C_COMPILER=clang \
+                #     -DCMAKE_CXX_COMPILER=clang++ \
+                #     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                #     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                #     -DQUIDDITCH_TOOLCHAIN_FILE=../toolchain/ToolchainFile.cmake &> "$fakeNNDir/cmakeOutput.txt"
+                #     ninja -j 20 &> "$fakeNNDir/buildOutput.txt"
+                #     grep "kernel does not fit into L1 memory and cannot be compiled" "$fakeNNDir/buildOutput.txt"
+                #     grep "Troublesome file path is" "$fakeNNDir/buildOutput.txt"
+                #     cd $here
+                #     # save a copy of the cmake and ninja build output
+                #     cp "$fakeNNDir/cmakeOutput.txt" "$fakeNNDir/buildOutput.txt" -t $myBuildDir
+                #     # save a copy of the generated executable
+                #     cp  "$fakeNNExec" -t $myBuildDir
+                # else
+                #     echo -e "\tcompile.sh: using cached golden  build for $golden"
+                # fi
         done
 fi
 
