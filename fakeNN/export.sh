@@ -75,7 +75,6 @@ if [[ "$correctness" == "correctness" ]];
             tail=${tail#*-}
             k=$(echo $tail | grep -oE $eatNum)
             golden=$(echo "$M""x""$N""x""$K""w0-0-0")
-            #echo -e "\texport.sh: checking $golden vs $ts..."
             output="$finalOutputDir/$ts/run_output.txt"
             goldenOutput="$goldenOutputDir/$golden/run_output.txt"
             check_exp_result $output $goldenOutput
@@ -105,7 +104,7 @@ if [[ "$correctness" == "correctness" ]];
                 k=$(echo $tail | grep -oE $eatNum)
                 dispatchNameTemplate="main\$async_dispatch_0_matmul_transpose_b_MxNxK_f64"
                 dispatchName="${dispatchNameTemplate/MxNxK/"$M"x"$N"x"$K"}"
-                # tiled results
+                # regular tiled results
                 experimentResults="$finalOutputDir/$ts/run_output.txt"
                 res=$(ls $experimentResults 2>/dev/null)
                 if [[ $experimentResults == $res ]]; 
@@ -113,7 +112,13 @@ if [[ "$correctness" == "correctness" ]];
                     echo -e "\texport results related to $ts"
                     kernelTime=$(grep -E "^(dispatch) 0: ([0-9]*) - ([0-9]*) = ([0-9]*)" "$experimentResults" | grep -oE '[^[:space:]]+$')
                     totalTime=$(grep -E "cycles ([0-9]*)" "$experimentResults" | grep -oE '[^[:space:]]+$')
-                    echo "$ts,$dispatchName,$kernelTime,$totalTime,$M,$N,$K,$m,$n,$k" >> $results
+                    if [[ $kernelTime == "" || $totalTime == "" ]];
+                        then
+                            echo -e "\t\t INVALID results for $ts"
+                            missingExperiments+=("$experimentResults")
+                        else
+                            echo "$ts,$dispatchName,$kernelTime,$totalTime,$M,$N,$K,$m,$n,$k" >> $results
+                    fi
                     else
                     missingExperiments+=("$experimentResults")
                 fi
@@ -126,7 +131,13 @@ if [[ "$correctness" == "correctness" ]];
                     echo -e "\texport results related to $golden"
                     kernelTime=$(grep -E "^(dispatch) 0: ([0-9]*) - ([0-9]*) = ([0-9]*)" "$experimentResults" | grep -oE '[^[:space:]]+$')
                     totalTime=$(grep -E "cycles ([0-9]*)" "$experimentResults" | grep -oE '[^[:space:]]+$')
-                    echo "$golden,$dispatchName,$kernelTime,$totalTime,$M,$N,$K,0,0,0" >> $results
+                    if [[ $kernelTime == "" || $totalTime == "" ]];
+                        then
+                            echo -e "\t\t INVALID results for $golden"
+                            missingExperiments+=("$experimentResults")
+                        else
+                        echo "$golden,$dispatchName,$kernelTime,$totalTime,$M,$N,$K,0,0,0" >> $results
+                    fi
                     else
                     missingExperiments+=("$experimentResults")
                 fi

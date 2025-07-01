@@ -1,5 +1,63 @@
 # Specify input sizes and tile sizes, and run on the Snitch Cluster!
-![](/home/emily/Quidditch/fakeNN/context2.png)
+![](./context.png)
+
+## Run a Matrix-Vector Transpose given INPUT SIZE and TILE SIZE
+
+Navigate to the `Quidditch/fakeNN directory` and do
+
+```
+. run_linear_layer.sh <searchSpace.csv> <genJsons?> <compile?> <run?> <export?> 
+```
+
+where
+
+- `<searchSpace.csv>` is the name of the csv file assumed to be located inside directory `Quidditch/fakeNN//home/hoppip/Quidditch/fakeNN/linear-layer-search-space/` and specifies M, N, K, m, n, and k:
+
+  ```
+  JSON Name,M,N,K,m,n,k
+  2x120x40w0-0-30,2,120,40,0,0,30
+  2x120x40w0-0-100,2,120,40,0,0,100
+  2x120x20w0-0-20,2,120,20,0,0,20
+  2x120x20w0-0-60,2,120,20,0,0,60
+  2x120x40w0-0-60,2,120,40,0,0,60
+  ```
+
+  ^^ example input csv file ^^
+
+- `<genJsons?>` is a flag to select whether to generate a JSON file for each tiling schemes specified in `searchSpace.csv`
+
+  - `genJsons` enables this step
+  - `no` skips this step
+
+- `<compile?>` is a flag to select whether to compile the fakeNN for each tiling scheme specified
+
+  - `compile` enables this step
+  - `no` skips this step
+  - `status` checks for compilation errors
+
+- `<run?>` is a flag to select whether to run the fakeNN executable for each tiling scheme specified
+
+  - `run` enables this step
+  - `no` skips this step
+
+- `<export?>` is a flag to select whether to export the results of each fakeNN to a csv file
+
+  - `export` enables this step
+  - `no` skips this step
+  - `correctness` checks the output of each fakeNN run with the its corresponding golden output file.
+
+### Example Runs
+
+```
+clear;. run_linear_layer.sh one-run.csv genJsons status no no
+clear;. run_linear_layer.sh one-run.csv genJsons compile no no
+clear;. run_linear_layer.sh one-run.csv genJsons status no no
+clear;. run_linear_layer.sh one-run.csv genJsons status run no
+clear;. run_linear_layer.sh one-run.csv genJsons status run correctness
+clear;. run_linear_layer.sh one-run.csv genJsons status run export
+```
+
+## old notes below
 
 ## Run for a selected input size and a bunch of tile sizes
 

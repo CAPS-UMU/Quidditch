@@ -28,13 +28,13 @@ cHeaderProlog="fakeNN_util-prolog"
 # 4. C header file basename
 gen_cmakelists_and_source(){
     # echo ""
-    echo "HELLO: tile scheme file is $1"
-    echo "HELLO: directory from which to pull tile scheme from is $2"
-    echo "HELLO: directory to save in is $3"
+    # echo "HELLO: tile scheme file is $1"
+    # echo "HELLO: directory from which to pull tile scheme from is $2"
+    # echo "HELLO: directory to save in is $3"
     jsons=$2
     out=$3
     ts=$1
-    echo "HELLO: M=$4, N=$5, K=$6, m=$7, n=$8, k=$9."
+    # echo "HELLO: M=$4, N=$5, K=$6, m=$7, n=$8, k=$9."
     if [[ "$ts" == "original" ]]; 
     then 
         # restore set up for 2x120x40 with tile sizes 0-0-60
@@ -115,16 +115,38 @@ if [[ "$status" == "status" ]];
             tail=${tail#*-}
             k=$(echo $tail | grep -oE $eatNum)
             golden=$(echo "$M""x""$N""x""$K""w0-0-0")
+            # check build
             echo -e "\tcompile.sh: checking $ts..."
             myBuildOutput="$finalOutputDir/$ts/buildOutput.txt"
-            #echo "$myBuildOutput"
-            grep "kernel does not fit into L1 memory and cannot be compiled" "$myBuildOutput"
-            grep "Troublesome file path is" "$myBuildOutput"
+            myErrRunOutput="$finalOutputDir/$ts/run_output.txt"
+            res=$(grep "kernel does not fit into L1 memory and cannot be compiled" $myBuildOutput)
+            if [[ $res != "" ]]; 
+            then
+                echo -e "\t\tERROR building $ts: $res"
+                echo $res > $myErrRunOutput
+            fi
+            res=$(grep "Troublesome file path is" "$myBuildOutput")
+            if [[ $res != "" ]]; 
+            then
+                    echo -e "\tERROR building $ts: $res"
+                    echo $res > $myErrRunOutput
+            fi
+            # check golden build
             echo -e "\tcompile.sh: checking $golden..."
             myBuildOutput="$goldenOutputDir/$golden/buildOutput.txt"
-            #echo "$myBuildOutput"
-            grep "kernel does not fit into L1 memory and cannot be compiled" "$myBuildOutput"
-            grep "Troublesome file path is" "$myBuildOutput"
+            myErrRunOutput="$goldenOutputDir/$golden/run_output.txt"
+            res=$(grep "kernel does not fit into L1 memory and cannot be compiled" $myBuildOutput)
+            if [[ $res != "" ]]; 
+            then
+                    echo -e "\tERROR building $ts: $res"
+                    echo $res > $myErrRunOutput
+            fi
+            res=$(grep "Troublesome file path is" "$myBuildOutput")
+            if [[ $res != "" ]]; 
+            then
+                    echo -e "\t\tERROR building $ts: $res"
+                    echo $res > $myErrRunOutput
+            fi
         done
     else
         # build each entry requested by CSV

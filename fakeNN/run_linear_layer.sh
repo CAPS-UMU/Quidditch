@@ -9,7 +9,7 @@ goldenJsonOutputDir="$here/linear-layer-search-space/golden-tiling-schemes"
 jsonOutputDir="$here/linear-layer-search-space/tiling-schemes"
 templates="$here/linear-layer-search-space/templates"
 # constants with COMPLETE PATH SPECIFIC TO MY COMPUTER
-quidditchDir="/home/emily/Quidditch" # <------------ modify this path with path to YOUR quidditch directory!
+quidditchDir="/home/hoppip/Quidditch" # <------------ modify this path with path to YOUR quidditch directory!
 # constants with derived from this COMPLETE PATH SPECIFIC TO MY COMPUTER
 buildDir="$quidditchDir/build"
 fakeNNDir="$quidditchDir/runtime/samples/fakeNN"
