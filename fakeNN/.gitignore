@@ -3,3 +3,5 @@
 ./*/buildOutput.txt
 linear-layer-search-space/out/*/*
 linear-layer-search-space/golden-out/*/*
+linear-layer-search-space/tiling-schemes/*
+linear-layer-search-space/golden-tiling-schemes/*

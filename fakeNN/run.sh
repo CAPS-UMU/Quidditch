@@ -80,9 +80,9 @@ counter=0
                 # else
                 #     echo -e "\trun.sh: getting run output for $golden (golden) (using cached output)"
                 # fi
-                # if (( $counter % $batchSize == 0 )); then
-                #     wait &> /dev/null
-                #     echo -e "\trun.sh: starting new batch..."
-                # fi
+                if (( $counter % $batchSize == 0 )); then
+                    wait &> /dev/null
+                    echo -e "\trun.sh: starting new batch..."
+                fi
         done
 wait &> /dev/null

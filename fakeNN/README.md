@@ -57,6 +57,19 @@ clear;. run_linear_layer.sh one-run.csv genJsons status run correctness
 clear;. run_linear_layer.sh one-run.csv genJsons status run export
 ```
 
+### matVecTest
+
+```
+clear;. run_linear_layer.sh matVecTtest.csv genJsons no no no
+clear;. run_linear_layer.sh matVecTtest.csv no status no no
+clear;. run_linear_layer.sh matVecTtest.csv no build no no
+clear;. run_linear_layer.sh matVecTtest.csv no status no no
+clear;. run_linear_layer.sh matVecTtest.csv no no run no
+clear;. run_linear_layer.sh matVecTtest.csv no no no export
+```
+
+
+
 ## old notes below
 
 ## Run for a selected input size and a bunch of tile sizes

@@ -132,21 +132,21 @@ if [[ "$status" == "status" ]];
                     echo $res > $myErrRunOutput
             fi
             # check golden build
-            echo -e "\tcompile.sh: checking $golden..."
-            myBuildOutput="$goldenOutputDir/$golden/buildOutput.txt"
-            myErrRunOutput="$goldenOutputDir/$golden/run_output.txt"
-            res=$(grep "kernel does not fit into L1 memory and cannot be compiled" $myBuildOutput)
-            if [[ $res != "" ]]; 
-            then
-                    echo -e "\tERROR building $ts: $res"
-                    echo $res > $myErrRunOutput
-            fi
-            res=$(grep "Troublesome file path is" "$myBuildOutput")
-            if [[ $res != "" ]]; 
-            then
-                    echo -e "\t\tERROR building $ts: $res"
-                    echo $res > $myErrRunOutput
-            fi
+            # echo -e "\tcompile.sh: checking $golden..."
+            # myBuildOutput="$goldenOutputDir/$golden/buildOutput.txt"
+            # myErrRunOutput="$goldenOutputDir/$golden/run_output.txt"
+            # res=$(grep "kernel does not fit into L1 memory and cannot be compiled" $myBuildOutput)
+            # if [[ $res != "" ]]; 
+            # then
+            #         echo -e "\tERROR building $ts: $res"
+            #         echo $res > $myErrRunOutput
+            # fi
+            # res=$(grep "Troublesome file path is" "$myBuildOutput")
+            # if [[ $res != "" ]]; 
+            # then
+            #         echo -e "\t\tERROR building $ts: $res"
+            #         echo $res > $myErrRunOutput
+            # fi
         done
     else
         # build each entry requested by CSV
