@@ -29,12 +29,16 @@ class ConfigureTiles
 public:
   using Base::Base;
   ConfigureTiles(const quidditch::ConfigureTilesOptions &options) {
-    // this->tilingSchemes = options.tilingSchemes;
-    // this->workloads = options.workloads;
-    this->tester = options.importTilingSchemes;
-    this->toRead = options.importTilingSchemes;
-    this->toAppend = options.exportUntiled;
-    this->tbl = (quidditch::TileInfoTbl *)options.tablePointer;
+    if(options.exportUntiled != ""){ // export mode
+      this->toAppend = options.exportUntiled;   
+      std::ofstream newFile(options.exportUntiled);
+      newFile << "hoodle\n";
+      newFile.close();   
+    }
+    else{ // import mode
+      this->toRead = options.importTilingSchemes;
+      this->tbl = (quidditch::TileInfoTbl *)options.tablePointer;      
+    }  
   }
   std::string errs = "";
 
@@ -44,7 +48,7 @@ protected:
   void exportUntiled(mlir::FunctionOpInterface *funcOp);
 
 private:
-  std::string tester = "HONEYBEE";
+  //std::string tester = "HONEYBEE";
   std::string toRead = "";
   std::string toAppend = "";
   int acc = 0;
@@ -61,6 +65,22 @@ static LogicalResult setTranslationInfo(FunctionOpInterface funcOp) {
       IREE::Codegen::TranslationInfoAttr::get(
           funcOp.getContext(),
           IREE::Codegen::DispatchLoweringPassPipeline::None, SymbolRefAttr()));
+}
+
+static LogicalResult exportRootConfig(FunctionOpInterface funcOp,
+                                   Operation *rootOp,
+                                   quidditch::TileInfoTbl *tbl, std::string toAppend) {
+  return TypeSwitch<Operation *, LogicalResult>(rootOp)
+      .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
+        if(toAppend != ""){ 
+          funcOp.emitWarning() << "\n\nCARROT: append is "<< toAppend;
+          std::ofstream newFile(toAppend, std::ios::app);
+          newFile << funcOp.getName().str() << std::endl;
+          newFile.close(); 
+        }
+        return success();
+      })
+      .Default(success());
 }
 
 static LogicalResult setRootConfig(FunctionOpInterface funcOp,
@@ -89,65 +109,20 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         bool dualBuffer = false;
         SmallVector<int64_t> myrtleCost = {};
 
-        // TODO: Figure out why it is that setting the third l1Tiles element to
-        // 0 somehow results in this kernel having an l1 interchange of {0, 1}.
-
-        // if (funcOp.getName() ==
-        //     "main$async_dispatch_0_matmul_transpose_b_1x400x161_f64") {
-        //   // TODO: Switch to 82 and true once correctness bugs are fixed.
-        //   dualBuffer = false;
-        // }
-
         if (tbl == 0) {
           funcOp.emitWarning() << "PEPPERMINT: Table pointer is zero!!";
           return failure();
-        }
-        // else {
-        //   std::stringstream ss;
-        //   for (auto const &[key, val] : *tbl) {
-        //     ss << key // string (key)
-        //        << ':';
-        //     ss << val // string's value
-        //        << std::endl;
-        //   }
-        //   funcOp.emitWarning() << "\nThis is what we read in!!\n" << ss.str()
-        //   << "\n"; return failure();
-        // }
-
-        //     if (auto search = example.find(2); search != example.end())
-        //     std::cout << "Found " << search->first << ' ' << search->second
-        //     << '\n';
-        // else
-        //     std::cout << "Not found\n";
-        // quidditch::TileInfoTbl::iterator
+          
+        }        
+        
+        // look up the tile size, interchange, and double buffering settings from table
         auto search = tbl->find(funcOp.getName().str());
         if (search == tbl->end()) {
           funcOp.emitWarning() << "PEPPERMINT: Root operation of this function "
                                   "is missing tiling scheme!";
           return failure();
         }
-
-        // auto x = *search;
-        // auto y = (*search).second;
-        // auto z = search->second;
-
-        // struct quidditch::TilingScheme* ts = **search;
-        //   &(tbl->find(std::string(funcOp.getName())))->second(); struct
         quidditch::TilingScheme &ts = search->second;
-        // if (funcOp.getName() ==
-        //     "main$async_dispatch_8_matmul_transpose_b_1x600x600_f64") {
-        //   quidditch::TilingScheme &ts = search->second;
-        //   std::stringstream ss;
-        //   ss << "\nCARROT: Tile scheme I'm using for " <<
-        //   funcOp.getName().str()
-        //      << " is ";
-        //   ss << ts << "\n";
-        //   funcOp.emitWarning() << "MAPLE SYRUP\n";
-        //   //funcOp.emitWarning() << ss.str();
-        // }else{
-        //   funcOp.emitWarning() << "\ncasper set root config \n";
-        // }
-
         if (!ts.getTiles_flat(l1Tiles)) {
           // funcOp.emitWarning() << "PEPPERMINT: Found tiling scheme, but "
           //                         "couldn't get l1 tile list!";
@@ -160,22 +135,24 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         }
         dualBuffer = ts.getDualBuffer();
 
-        std::string myErrs;
+        // std::string myErrs;
 
-        if (failed(myrtle::getCost(rootOp, l1Tiles, l1Interchange, myrtleCost,
-                                   myErrs))) {
-          funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-          return failure();
-        } 
-        else {
-          ts.setMyrtleCost(myrtleCost);
-          // uncomment the following if-statement to see the tile size and tile count breakdown
-          // if (funcOp.getName() ==
-          //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
-          //   funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-          // }
-        }
+        // // I don't even think this get cost stuff matters
+        // if (failed(myrtle::getCost(rootOp, l1Tiles, l1Interchange, myrtleCost,
+        //                            myErrs))) {
+        //   funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+        //   return failure();
+        // } 
+        // else {
+        //   ts.setMyrtleCost(myrtleCost);
+        //   // uncomment the following if-statement to see the tile size and tile count breakdown
+        //   // if (funcOp.getName() ==
+        //   //     "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
+        //   //   funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
+        //   // }
+        // }
 
+        // 
         setLoweringConfig(rootOp,
                           quidditch::Snitch::LoweringConfigAttr::get(
                               rootOp->getContext(), workgroupTiles, l1Tiles,
@@ -188,17 +165,11 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 void ConfigureTiles::runOnOperation() {
   if (toRead == "" &&
       toAppend == "") { // skip this pass when no arguments passed
-    // getOperation().emitWarning() << "PEPPERMINT: No args passed, so
-    // ignoring!!";
+    //getOperation().emitWarning() << "PEPPERMINT: No args passed, so ignoring!!";
     return;
   }
 
   FunctionOpInterface funcOp = getOperation();
-
-  if (!tbl) { // export functions to json file
-    funcOp.emitWarning() << "\ncasper: tbl pointer invalid\n";
-    return;
-  }
 
   // TODO: un-comment out check for translationInfo, instead of blindly
   // overwriting it.
@@ -218,16 +189,26 @@ void ConfigureTiles::runOnOperation() {
     return;
   }
 
+  if(toAppend != ""){
+      funcOp.emitWarning()
+          << "\nPEPPERMINT: time to export this sucker!\n";
+    if (failed(exportRootConfig(funcOp, rootOperation, tbl, toAppend))) {
+      funcOp.emitWarning()
+          << "\nExporting this tile-able dispatch failed\n";
+      return signalPassFailure();
+    }
+    return;
+
+  }
+
   // Set the same translation info for all functions right now.
   // This should move into 'setRootConfig' if we gain different pass pipelines
   // for different kernels.
   if (failed(setTranslationInfo(funcOp))) {
-    funcOp.emitWarning() << "\nPEPPERMINT: groundhog\n";
     return signalPassFailure();
   }
 
-  // TODO: un-comment out check for lowering config, instead of blindly
-  // overwriting it.
+  // actually annotate linalg op with the tile size
   auto loweringConfig =
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
   if (!loweringConfig) {
@@ -249,29 +230,3 @@ void ConfigureTiles::runOnOperation() {
     signalPassFailure();
   }
 }
-
-// std::unique_ptr<InterfacePass<mlir::FunctionOpInterface>>
-// createConfigureTiles(const quidditch::ConfigureTilesOptions &options) {
-//   return std::make_unique<ConfigureTiles>(options);
-// }
-
-// std::unique_ptr<InterfacePass<mlir::FunctionOpInterface>>
-// createConfigureTiles(const quidditch::ConfigureTilesOptions &options, bool
-// valid) {
-//   return std::make_unique<ConfigureTiles>(options, valid);
-// }
-// std::unique_ptr<OperationPass<IREE::HAL::ExecutableVariantOp>>
-// createReconcileTranslationInfoPass() {
-//   return std::make_unique<ReconcileTranslationInfoPass>();
-// }
-// mlir::ModuleOp
-
-// std::unique_ptr<OperationPass<mlir::ModuleOp>>
-// createConfigureTilesPass() {
-//   return std::make_unique<ConfigureTiles>();
-// }
-
-// std::unique_ptr<OperationPass<IREE::HAL::ExecutableVariantOp>>
-// createConfigureTilesPass() {
-//   return std::make_unique<ConfigureTiles>();
-// }

@@ -54,11 +54,11 @@ TileInfoTbl *exportTileInfoTable(TileInfoTbl *tbl, const std::string &filePath,
   std::map<std::string, int> costMap = {};
 
   for (const auto &pear : *tbl) {
-    ofs << pear.first << " : ";// << "\n";
-    if(pear.second.myrtleCost.size() > 0){
-      ofs << pear.second.myrtleCost[0] << " " << pear.second.myrtleCost[1];
-    }
-    ofs << "\n\n";
+    ofs << pear.first <<"\n";
+    // if(pear.second.myrtleCost.size() > 0){
+    //   ofs << pear.second.myrtleCost[0] << " " << pear.second.myrtleCost[1];
+    // }
+    // ofs << "\n\n";
    // costMap.insert(std::pair<std::string, int>(pear.first, pear.second.myrtleCost[0]));
   }
   // auto hoodle = llvm::json::Object(costMap);

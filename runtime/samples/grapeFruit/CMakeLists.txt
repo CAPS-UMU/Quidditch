@@ -1,6 +1,6 @@
 iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64" M 5 N 6 K 7)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-export-costs=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes-costs.txt --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-time-disp=grapeFruit --iree-quidditch-export-costs=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes-costs.txt --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-export-untiled=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes-request.txt --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --iree-quidditch-time-disp=grapeFruit --iree-quidditch-export-untiled=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes-costs.txt --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/emily-tile-sizes.json)
 add_library(grapeFruit_util grapeFruit_util.c)
 target_link_libraries(grapeFruit_util
     PRIVATE
