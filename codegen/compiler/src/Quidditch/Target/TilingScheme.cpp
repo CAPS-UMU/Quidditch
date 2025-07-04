@@ -274,6 +274,7 @@ bool TilingScheme::getOrder_flat(llvm::SmallVector<int64_t> &out) {
       out[i] = (int64_t)order[i][0];
     }
   }
+  
   return true;
 }
 
@@ -313,35 +314,3 @@ std::stringstream &operator<<(std::stringstream &ss,
 }
 
 } // namespace quidditch
-
-
-  /*
-  J.array([&] {
-    for (const Event &E : Events)
-      J.object([&] {
-        J.attribute("timestamp", int64_t(E.Time));
-        J.attributeArray("participants", [&] {
-          for (const Participant &P : E.Participants)
-            J.value(P.toString());
-        });
-      });
-  });
-  */
- // [ { "timestamp": 19287398741, "participants": [ "King Kong", "Miley Cyrus", "Cleopatra" ] }, ... ]
-  // std::stringstream ss;
-  // ss << ifs.rdbuf();
-  // if (ss.str().length() == 0) {
-  //   errs = "\nTiling Scheme file cannot have content length of 0\n";
-  //   ifs.close();
-  //   return 0;
-  // }
-  // // try to parse list of schemes
-  // if (!parseTilingSchemes(tbl, StringRef(ss.str()), errs)) {
-  //   result = 0;
-  // }
-    //ros << llvm::json::toJSON(costMap);
-  // auto tester = llvm::json::Object();
-  // tester.insert({"name",5});
-  // ros << tester;//llvm::json::Value(tester);
-  // ofs << ros.str();
-  // SmallVector<int64_t> myrtleCost = {};

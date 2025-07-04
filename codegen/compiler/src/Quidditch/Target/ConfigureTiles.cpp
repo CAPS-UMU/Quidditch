@@ -82,7 +82,7 @@ static LogicalResult exportRootConfig(FunctionOpInterface funcOp,
 
 static LogicalResult setRootConfig(FunctionOpInterface funcOp,
                                    Operation *rootOp,
-                                   quidditch::TileInfoTbl *tbl, std::string toAppend, std::string myrtlePath) {
+                                   quidditch::TileInfoTbl *tbl, std::string toAppend,std::string toRead, std::string myrtlePath) {
   return TypeSwitch<Operation *, LogicalResult>(rootOp)
       .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
 
@@ -97,7 +97,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         char *intrepreter= (char*) "python3"; 
         // char *pythonPath="./Pipetest.py"; 
         char *pythonPath= (char*) myrtlePath.c_str();
-        char *pythonArgs[]={intrepreter,pythonPath, (char*)toAppend.c_str(),NULL};
+        char *pythonArgs[]={intrepreter,pythonPath, (char*)toAppend.c_str(),(char*)toRead.c_str(),NULL};
         // char *pythonPath= (char*) targetOptions.exportCosts.c_str();
         // char *pythonArgs[]={intrepreter,pythonPath, (char*) targetOptions.exportUntiled.c_str(),NULL};
         execvp(intrepreter,pythonArgs);
@@ -107,7 +107,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
       wait(&status);
       std::string errs;
       quidditch::fillTileInfoTable(
-          tbl, toAppend,
+          tbl, toRead,
           errs);
       
           
@@ -224,7 +224,7 @@ void ConfigureTiles::runOnOperation() {
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
   if (!loweringConfig) {
 
-    if (failed(setRootConfig(funcOp, rootOperation, tbl, toAppend, myrtlePath))) {
+    if (failed(setRootConfig(funcOp, rootOperation, tbl, toAppend, toRead,myrtlePath))) {
       funcOp.emitWarning()
           << "\nPEPPERMINT: cheesey star set root config failed\n";
       return signalPassFailure();

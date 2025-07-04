@@ -225,12 +225,8 @@ public:
     }
     modulePassManager.addPass(createMaterializeUserConfigsPass());
     FunctionLikeNest funcPassManager(modulePassManager);
-    //funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
-   
+
     // export dispatches to tile
-    // std::ofstream newFile(targetOptions.exportUntiled,std::ios::app);
-    //   newFile << "watermelon\n";
-    //   newFile.close(); 
     funcPassManager.addPass([&] { 
       auto thePass = quidditch::createConfigureTiles({"",
                                               targetOptions.exportUntiled,
@@ -239,32 +235,12 @@ public:
       return thePass;
     });
 
-
-    // #include <unistd.h>
-//     char* argument_list[] = {"ls", "-l", NULL}; // NULL terminated array of char* strings
-
-// // Ok! Will execute the command "ls -l"
-//     execvp("ls", argument_list);
-
-
     // automatically tile the dispatches
     funcPassManager.addPass([&] {    
-      // quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
-      //     &targetOptions.tileInfo, targetOptions.importTilingSchemes,
-      //     targetOptions.tableInfoErrs);
-
-      // if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
-      //   llvm::report_fatal_error(llvm::StringRef(targetOptions.tableInfoErrs),
-      //                            false);
-      // }
       auto thePass = quidditch::createConfigureTiles({targetOptions.importTilingSchemes,
                                               targetOptions.exportUntiled,
                                               targetOptions.exportCosts,
                                               (std::uintptr_t)&targetOptions.tileInfo});
-
-      // quidditch::TileInfoTbl * tablePointer2 = quidditch::exportTileInfoTable(
-      //     &targetOptions.tileInfo, targetOptions.exportUntiled,
-      //     targetOptions.tableInfoErrs);
       return thePass;
     });
   }
