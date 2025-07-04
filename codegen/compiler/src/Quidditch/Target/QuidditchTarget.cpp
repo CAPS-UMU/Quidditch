@@ -52,8 +52,7 @@
 
 #include "TilingScheme.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <unistd.h>
-#include <sys/wait.h>
+
 
 using namespace mlir;
 using namespace mlir::iree_compiler;
@@ -229,14 +228,14 @@ public:
     //funcPassManager.addPass(quidditch::createConfigureForSnitchPass);
    
     // export dispatches to tile
-    funcPassManager.addPass([&] {
-      quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
-          &targetOptions.tileInfo, targetOptions.importTilingSchemes,
-          targetOptions.tableInfoErrs);
+    // std::ofstream newFile(targetOptions.exportUntiled,std::ios::app);
+    //   newFile << "watermelon\n";
+    //   newFile.close(); 
+    funcPassManager.addPass([&] { 
       auto thePass = quidditch::createConfigureTiles({"",
                                               targetOptions.exportUntiled,
                                               "",
-                                              (std::uintptr_t)tablePointer});
+                                              (std::uintptr_t)&targetOptions.tileInfo});
       return thePass;
     });
 
@@ -249,35 +248,19 @@ public:
 
 
     // automatically tile the dispatches
-    funcPassManager.addPass([&] {
-      if(targetOptions.exportUntiled != ""){
-        pid_t pid = fork(); 
-      if (pid == 0)
-      {
-        //char* argument_list[] = {"ls", "-l", NULL}; // NULL terminated array of char* strings
-        //std::cout<<"child started"<<std::endl;
-        char *intrepreter= (char*) "python3"; 
-        // char *pythonPath="./Pipetest.py"; 
-        char *pythonPath= (char*) "/home/emily/Quidditch/myrtle/fakeMyrtle.py";
-        char *pythonArgs[]={intrepreter,pythonPath,NULL};
-        execvp(intrepreter,pythonArgs);
-        //execvp("ls", argument_list);
-      }
-      int status;
-      wait(&status);
-      }      
-      quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
-          &targetOptions.tileInfo, targetOptions.importTilingSchemes,
-          targetOptions.tableInfoErrs);
+    funcPassManager.addPass([&] {    
+      // quidditch::TileInfoTbl * tablePointer = quidditch::fillTileInfoTable(
+      //     &targetOptions.tileInfo, targetOptions.importTilingSchemes,
+      //     targetOptions.tableInfoErrs);
 
-      if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
-        llvm::report_fatal_error(llvm::StringRef(targetOptions.tableInfoErrs),
-                                 false);
-      }
+      // if (tablePointer == 0 && (targetOptions.importTilingSchemes != "")) {
+      //   llvm::report_fatal_error(llvm::StringRef(targetOptions.tableInfoErrs),
+      //                            false);
+      // }
       auto thePass = quidditch::createConfigureTiles({targetOptions.importTilingSchemes,
-                                              "",
-                                              "",
-                                              (std::uintptr_t)tablePointer});
+                                              targetOptions.exportUntiled,
+                                              targetOptions.exportCosts,
+                                              (std::uintptr_t)&targetOptions.tileInfo});
 
       // quidditch::TileInfoTbl * tablePointer2 = quidditch::exportTileInfoTable(
       //     &targetOptions.tileInfo, targetOptions.exportUntiled,
