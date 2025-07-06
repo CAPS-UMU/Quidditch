@@ -53,12 +53,12 @@ def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionO
   }];
   // let constructor = "ConfigureTiles(const quidditch::ConfigureTilesOptions &options, bool valid)";
     let options = [
-    Option<"importTilingSchemes", "import-tiling-schemes", "std::string", /*default=*/"",
+    Option<"importTiles", "import-tiling-tiles", "std::string", /*default=*/"",
            "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
-    Option<"exportUntiled", "export-untiled", "std::string", /*default=*/"",
-           "Name of a JSON file to which we export untiled linalg operations.">,
-    Option<"exportCosts", "export-costs", "std::string", /*default=*/"",
-           "Name of a JSON file to which we export cost of each tiled linalg operation.">,
+    Option<"myrtleMode", "myrtle-mode", "std::string", /*default=*/"",
+           "Tile selection mode for myrtle: sflt, scyc, or svrcyc">,
+    Option<"myrtlePath", "myrtle", "std::string", /*default=*/"",
+           "Path to Myrtle executable">,
     Option<"tablePointer", "TODORemoveThisOption", "std::uintptr_t", /*default=*/"0",
            "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
   ];

@@ -25,8 +25,8 @@ def tileSelection(csvFile):
     # ranked = rankBy(dfs, (dispNo, 1), "Kernel Time", True)
     df["Predicted Kernel Time"] = df.apply(lambda y: svr.predict([y[["Microkernel Count","Regular Loads","Reused Streaming Loads","Space Needed in L1","Row Dim","Reduction Dim"]]])[0], axis=1)
     ranked = df.sort_values("Predicted Kernel Time", ascending=True)
-    print(ranked)
-    print(ranked.iloc[0]["Row Dim"])
+    #print(ranked)
+    #print(ranked.iloc[0]["Row Dim"])
     m = 1
     n = int(ranked.iloc[0]["Row Dim"])
     k = int(ranked.iloc[0]["Reduction Dim"])
@@ -50,18 +50,14 @@ def faker(dispatchName):
             m = 0
             n = 56
             k = 100
-    # fake NN special case (for now)
-    if dispatchName == "main$async_dispatch_0_matmul_transpose_b_1x120x40_f64":
-            m = 0
-            n = 0
-            k = 60
     return (m,n,k,dualBuffer)
 
+# arg 1 is dispatchName as a string
+# arg 2 is tile selection mode
+# arg 3 is file to write tile scheme to
 def main():
     print("yodelayheehoooooo")
-    f = open(sys.argv[1], 'r')
-    dispatchName = f.read()
-    f.close()
+    dispatchName = sys.argv[1]
     print (dispatchName)
     dispatchRegex=re.compile(r'main\$async_dispatch_\d+_matmul_transpose_b_(\d+)x(\d+)x(\d+)_f64')
     M,N,K = dispatchRegex.search(dispatchName).groups()
@@ -72,11 +68,17 @@ def main():
         jen = tsg.TileSizeGenerator(int(N),int(K),dispatchName)
         options = jen.validOptions()
         sizeAndLoadInfo = jen.exportOptionsToCSV(f'{M}x{N}x{K}wm-n-k', 1, options)
-        print(sizeAndLoadInfo)        
-        m,n,k,dualBuffer = tileSelection(f'{M}x{N}x{K}wm-n-k_case1_searchSpace.csv')
-   
+        #print(sizeAndLoadInfo)
+        m,n,k,dualBuffer = tileSelection(f'{M}x{N}x{K}wm-n-k_case1_searchSpace.csv')   
+        if sys.argv[2] == "fflt":
+            print("someday, use flat filtering to select tiles...")
+        else:
+            if sys.argv[2] == "scyc":
+                print("someday, use simply cycle count predictor to select tiles...")
+            else:
+                print("We used an SVR to select tiles.")   
     # default values
-    with open(sys.argv[2], 'r') as file:
+    with open(sys.argv[3], 'r') as file:
         data = json.load(file)
     node = {}    
     node["loop-order"] = [[2,0], [0,0], [1,0]]
@@ -85,7 +87,7 @@ def main():
     node["tile-sizes"] = [[m], [n], [k]]
     node["dual-buffer"] = dualBuffer
     data[dispatchName]=node    
-    f = open(sys.argv[2], "w")   # 'r' for reading and 'w' for writing
+    f = open(sys.argv[3], "w") 
     f.write(f"{json.dumps(data)}")
     f.close()
 

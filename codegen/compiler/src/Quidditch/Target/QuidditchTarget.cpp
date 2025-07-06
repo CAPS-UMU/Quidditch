@@ -86,9 +86,9 @@ struct QuidditchTargetOptions {
   std::string toolChainRoot;
   bool assertCompiled = false;
   std::string timeDispatch = ""; // added for Specialize DMA Code Pass
-  std::string importTilingSchemes = ""; // added for Configure Tiles Pass
-  std::string exportUntiled = "";       // added for Configure Tiles Pass
-  std::string exportCosts = "";       // added for Configure Tiles Pass
+  std::string importTiles = ""; // added for Configure Tiles Pass
+  std::string myrtleMode = "";       // added for Configure Tiles Pass
+  std::string myrtlePath = "";       // added for Configure Tiles Pass
   quidditch::TileInfoTbl tileInfo =
       quidditch::TileInfoTbl(); // added for Configure Tiles Pass
   std::string tableInfoErrs = "FROG ";
@@ -130,16 +130,16 @@ struct QuidditchTargetOptions {
             "Flag to enable timing dispatches for myrtle"));    
     // added for Configure Tiles Pass
     binder.opt<std::string>(
-        "iree-quidditch-import-tiles", importTilingSchemes,
+        "iree-quidditch-import-tiles", importTiles,
         llvm::cl::cat(category),
         llvm::cl::desc(
             "Path to a JSON file from which we import tiling schemes"));
     binder.opt<std::string>(
-        "iree-quidditch-export-untiled", exportUntiled, llvm::cl::cat(category),
+        "iree-quidditch-myrtle-mode", myrtleMode, llvm::cl::cat(category),
         llvm::cl::desc("Path to a JSON file to which we export untiled linalg "
                        "operations."));
     binder.opt<std::string>(
-        "iree-quidditch-export-costs", exportCosts, llvm::cl::cat(category),
+        "iree-quidditch-myrtle", myrtlePath, llvm::cl::cat(category),
         llvm::cl::desc("Path to a JSON file to which we export the cost of "
                        "each tiled linalg operation"));
     // added for Configure Using ZigZag Pass
@@ -229,7 +229,7 @@ public:
     // export dispatches to tile
     funcPassManager.addPass([&] { 
       auto thePass = quidditch::createConfigureTiles({"",
-                                              targetOptions.exportUntiled,
+                                              targetOptions.myrtleMode,
                                               "",
                                               (std::uintptr_t)&targetOptions.tileInfo});
       return thePass;
@@ -237,9 +237,9 @@ public:
 
     // automatically tile the dispatches
     funcPassManager.addPass([&] {    
-      auto thePass = quidditch::createConfigureTiles({targetOptions.importTilingSchemes,
-                                              targetOptions.exportUntiled,
-                                              targetOptions.exportCosts,
+      auto thePass = quidditch::createConfigureTiles({targetOptions.importTiles,
+                                              targetOptions.myrtleMode,
+                                              targetOptions.myrtlePath,
                                               (std::uintptr_t)&targetOptions.tileInfo});
       return thePass;
     });

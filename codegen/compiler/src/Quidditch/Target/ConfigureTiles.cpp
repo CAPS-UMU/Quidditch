@@ -1,5 +1,7 @@
 #include "Passes.h"
 
+#include <sys/wait.h>
+#include <unistd.h>
 #include "Myrtle.h"
 #include "Quidditch/Dialect/Snitch/IR/QuidditchSnitchAttrs.h"
 #include "TilingScheme.h"
@@ -11,8 +13,6 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include <unistd.h>
-#include <sys/wait.h>
 
 namespace quidditch {
 #define GEN_PASS_DEF_CONFIGURETILES
@@ -24,37 +24,29 @@ using namespace mlir::iree_compiler;
 
 namespace {
 
-enum ConfigureTilesState { importFromFile, exportToFile, error };
-
 class ConfigureTiles
     : public quidditch::impl::ConfigureTilesBase<ConfigureTiles> {
 public:
   using Base::Base;
   ConfigureTiles(const quidditch::ConfigureTilesOptions &options) {
-      this->toAppend = options.exportUntiled;   
-      this->toRead = options.importTilingSchemes;
-      this->myrtlePath= options.exportCosts;
-      this->tbl = (quidditch::TileInfoTbl *)options.tablePointer;    
+    this->importTiles = options.importTiles;
+    this->myrtleMode = options.myrtleMode;
+    this->myrtlePath = options.myrtlePath;
+    this->tbl = (quidditch::TileInfoTbl *)options.tablePointer;
   }
   std::string errs = "";
 
 protected:
   void runOnOperation() override;
-  void importTileScheme(mlir::FunctionOpInterface *funcOp);
-  void exportUntiled(mlir::FunctionOpInterface *funcOp);
 
 private:
-  //std::string tester = "HONEYBEE";
-  std::string toRead = "";
-  std::string toAppend = "";
+  std::string importTiles = "";
   std::string myrtlePath = "";
+  std::string myrtleMode = "";
   int acc = 0;
   quidditch::TileInfoTbl *tbl;
 };
 } // namespace
-
-void ConfigureTiles::importTileScheme(mlir::FunctionOpInterface *funcOp) {}
-void ConfigureTiles::exportUntiled(mlir::FunctionOpInterface *funcOp) {}
 
 static LogicalResult setTranslationInfo(FunctionOpInterface funcOp) {
   return setTranslationInfo(
@@ -64,55 +56,35 @@ static LogicalResult setTranslationInfo(FunctionOpInterface funcOp) {
           IREE::Codegen::DispatchLoweringPassPipeline::None, SymbolRefAttr()));
 }
 
-static LogicalResult exportRootConfig(FunctionOpInterface funcOp,
-                                   Operation *rootOp,
-                                   quidditch::TileInfoTbl *tbl, std::string toAppend) {
-  return TypeSwitch<Operation *, LogicalResult>(rootOp)
-      .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
-        if(toAppend != ""){ 
-         // funcOp.emitWarning() << "\n\nCARROT: append is "<< toAppend << "\n and appending " << funcOp.getName().str() << "\n";
-          std::ofstream newFile(toAppend);
-          newFile << funcOp.getName().str();
-          newFile.close(); 
-        }
-        return success();
-      })
-      .Default(success());
-}
-
 static LogicalResult setRootConfig(FunctionOpInterface funcOp,
                                    Operation *rootOp,
-                                   quidditch::TileInfoTbl *tbl, std::string toAppend,std::string toRead, std::string myrtlePath) {
+                                   quidditch::TileInfoTbl *tbl, std::string myrtlePath, std::string myrtleMode, std::string importTiles) {
   return TypeSwitch<Operation *, LogicalResult>(rootOp)
       .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
+        std::string tileSizesPath = (importTiles != "") ? importTiles : "myrtle-tiles.json";
+        std::string dispatchName = funcOp.getName().str();
+        // if myrtle enabled, automatically generate tile sizes
+        if (myrtlePath != "") {
+          pid_t pid = fork();
+          if (pid == 0) {
+            char *intrepreter = (char *)"python3";
+            char *pythonPath = (char *)myrtlePath.c_str();
+            char *pythonArgs[] = {intrepreter, pythonPath, (char*)dispatchName.c_str(),(char *)myrtleMode.c_str(),
+                                  (char *)tileSizesPath.c_str(), NULL};
+            execvp(intrepreter, pythonArgs);
+          }
+          int status;
+          wait(&status);
 
-
-
-      
-      pid_t pid = fork(); 
-      if (pid == 0)
-      {
-        //char* argument_list[] = {"ls", "-l", NULL}; // NULL terminated array of char* strings
-        //std::cout<<"child started"<<std::endl;
-        char *intrepreter= (char*) "python3"; 
-        // char *pythonPath="./Pipetest.py"; 
-        char *pythonPath= (char*) myrtlePath.c_str();
-        char *pythonArgs[]={intrepreter,pythonPath, (char*)toAppend.c_str(),(char*)toRead.c_str(),NULL};
-        // char *pythonPath= (char*) targetOptions.exportCosts.c_str();
-        // char *pythonArgs[]={intrepreter,pythonPath, (char*) targetOptions.exportUntiled.c_str(),NULL};
-        execvp(intrepreter,pythonArgs);
-        //execvp("ls", argument_list);
-      }
-      int status;
-      wait(&status);
-      std::string errs;
-      quidditch::fillTileInfoTable(
-          tbl, toRead,
-          errs);
-      
+        } 
+        // import the tile sizes
+        std::string errs;
+        if(quidditch::fillTileInfoTable(tbl, tileSizesPath, errs) == 0){
+          funcOp.emitWarning()
+                << "\nImporting Tiles failed: \n" << errs << "\n";
+            return failure();
           
-
-
+        }
         // [0]: Always one in our matvec case.
 
         // [1]: How many rows we are processing. Should fit in L1.
@@ -130,21 +102,21 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         //   only applicable once on Occamy.
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
-        SmallVector<int64_t> l1Interchange = {1, 1, 1}; //{2, 0, 1};
+        SmallVector<int64_t> l1Interchange = {2, 0, 1};
         bool dualBuffer = false;
         SmallVector<int64_t> myrtleCost = {};
-
+        // if table of tiling schemes is invalid, throw an error
         if (tbl == 0) {
           funcOp.emitWarning() << "\nPEPPERMINT: Table pointer is zero!!";
           return failure();
-          
-        }        
-        
-        // look up the tile size, interchange, and double buffering settings from table
+        }
+        // look up the tile size, interchange, and double buffering settings
+        // from table
         auto search = tbl->find(funcOp.getName().str());
         if (search == tbl->end()) {
-          funcOp.emitWarning() << "\nPEPPERMINT: Root operation of this function "
-                                  "is missing tiling scheme!";
+          funcOp.emitWarning()
+              << "\nPEPPERMINT: Root operation of this function "
+                 "is missing tiling scheme!";
           return failure();
         }
         quidditch::TilingScheme &ts = search->second;
@@ -162,21 +134,21 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         std::stringstream ss("");
         ss << ts;
-        funcOp.emitWarning() << "\nAFTER MYRTLE, tiling scheme is "<<ss.str()<<"\n";
-       
+        funcOp.emitWarning()
+            << "\nAFTER MYRTLE, tiling scheme is " << ss.str() << "\n";
+        // set lowering config according to info in table
         setLoweringConfig(rootOp,
-                          quidditch::Snitch::LoweringConfigAttr::get(
+        quidditch::Snitch::LoweringConfigAttr::get(
                               rootOp->getContext(), workgroupTiles, l1Tiles,
                               l1Interchange, dualBuffer, myrtleCost));
-        return success();
+                          return success();
       })
       .Default(success());
 }
 
 void ConfigureTiles::runOnOperation() {
-  if (toRead == "" &&
-      toAppend == "") { // skip this pass when no arguments passed
-    //getOperation().emitWarning() << "PEPPERMINT: No args passed, so ignoring!!";
+  if (importTiles == "" && myrtlePath == "") {
+    // skip this pass when no arguments passed
     return;
   }
 
@@ -191,25 +163,12 @@ void ConfigureTiles::runOnOperation() {
   FailureOr<Operation *> rootOp = getRootOperation(computeOps);
 
   if (failed(rootOp)) {
-    funcOp.emitWarning() << "\nPEPPERMINT: pumpkin\n";
     return signalPassFailure();
   }
 
   Operation *rootOperation = rootOp.value();
   if (!rootOperation) {
     return;
-  }
-
-  if(toRead == ""){
-      // funcOp.emitWarning()
-      //     << "\nPEPPERMINT: time to export this sucker!\n";
-    if (failed(exportRootConfig(funcOp, rootOperation, tbl, toAppend))) {
-      funcOp.emitWarning()
-          << "\nExporting this tile-able dispatch failed\n";
-      return signalPassFailure();
-    }
-    return;
-
   }
 
   // Set the same translation info for all functions right now.
@@ -219,12 +178,12 @@ void ConfigureTiles::runOnOperation() {
     return signalPassFailure();
   }
 
-  // actually annotate linalg op with the tile size
+  // annotate linalg ops with tile sizes
   auto loweringConfig =
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
+  // only add the lowering config if one does not exist already
   if (!loweringConfig) {
-
-    if (failed(setRootConfig(funcOp, rootOperation, tbl, toAppend, toRead,myrtlePath))) {
+    if (failed(setRootConfig(funcOp, rootOperation, tbl, myrtlePath, myrtleMode, importTiles))) {
       funcOp.emitWarning()
           << "\nPEPPERMINT: cheesey star set root config failed\n";
       return signalPassFailure();
