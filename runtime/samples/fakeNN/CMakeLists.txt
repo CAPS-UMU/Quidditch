@@ -1,7 +1,7 @@
 set( MYRTLE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../myrtle/myrtle.py)
 iree_turbine(SRC fakeNN.py DST ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DTYPE "f64" M 2 N 120 K 40)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DST fakeNN FLAGS --mlir-disable-threading --iree-quidditch-time-disp=fakenn2x120x40 --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc LLVM DST fakeNN_llvm FLAGS --iree-quidditch-time-disp=fakenn2x120x40 --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc DST fakeNN FLAGS --mlir-disable-threading --iree-quidditch-time-disp=fakenn2x120x40 --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-myrtle=${MYRTLE_PATH})
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/fakeNN.mlirbc LLVM DST fakeNN_llvm FLAGS --iree-quidditch-time-disp=fakenn2x120x40 --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-myrtle=${MYRTLE_PATH})
 add_library(fakeNN_util fakeNN_util.c)
 target_link_libraries(fakeNN_util
     PRIVATE

@@ -59,6 +59,8 @@ def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionO
            "Tile selection mode for myrtle: sflt, scyc, or svrcyc">,
     Option<"myrtlePath", "myrtle", "std::string", /*default=*/"",
            "Path to Myrtle executable">,
+    Option<"myrtleOut", "myrtle-out", "std::string", /*default=*/"",
+           "Path to Myrtle output json file">,
     Option<"tablePointer", "TODORemoveThisOption", "std::uintptr_t", /*default=*/"0",
            "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
   ];

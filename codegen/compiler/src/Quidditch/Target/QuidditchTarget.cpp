@@ -89,6 +89,7 @@ struct QuidditchTargetOptions {
   std::string importTiles = ""; // added for Configure Tiles Pass
   std::string myrtleMode = "";       // added for Configure Tiles Pass
   std::string myrtlePath = "";       // added for Configure Tiles Pass
+  std::string myrtleOut = "";
   quidditch::TileInfoTbl tileInfo =
       quidditch::TileInfoTbl(); // added for Configure Tiles Pass
   std::string tableInfoErrs = "FROG ";
@@ -136,12 +137,13 @@ struct QuidditchTargetOptions {
             "Path to a JSON file from which we import tiling schemes"));
     binder.opt<std::string>(
         "iree-quidditch-myrtle-mode", myrtleMode, llvm::cl::cat(category),
-        llvm::cl::desc("Path to a JSON file to which we export untiled linalg "
-                       "operations."));
+        llvm::cl::desc("Choose tile selection method with sflt, scyc, or svrcyc."));
     binder.opt<std::string>(
         "iree-quidditch-myrtle", myrtlePath, llvm::cl::cat(category),
-        llvm::cl::desc("Path to a JSON file to which we export the cost of "
-                       "each tiled linalg operation"));
+        llvm::cl::desc("Complete path to myrtle script"));
+    binder.opt<std::string>(
+        "iree-quidditch-myrtle-out", myrtleOut, llvm::cl::cat(category),
+        llvm::cl::desc("Path to json in which myrtle stores its chosen tile sizes."));
     // added for Configure Using ZigZag Pass
     binder.opt<std::string>(
         "iree-quidditch-zigzag-workloads", zigzagWorkloads,
@@ -226,20 +228,19 @@ public:
     modulePassManager.addPass(createMaterializeUserConfigsPass());
     FunctionLikeNest funcPassManager(modulePassManager);
 
-    // export dispatches to tile
-    funcPassManager.addPass([&] { 
-      auto thePass = quidditch::createConfigureTiles({"",
-                                              targetOptions.myrtleMode,
-                                              "",
-                                              (std::uintptr_t)&targetOptions.tileInfo});
-      return thePass;
-    });
+    // import any manually supplied tile sizes
+    if(targetOptions.importTiles != ""){
+      std::string errs;
+    quidditch::fillTileInfoTable(&targetOptions.tileInfo, targetOptions.importTiles, errs);
 
-    // automatically tile the dispatches
+    }
+
+    // automatically tile the rest of the dispatches
     funcPassManager.addPass([&] {    
       auto thePass = quidditch::createConfigureTiles({targetOptions.importTiles,
                                               targetOptions.myrtleMode,
                                               targetOptions.myrtlePath,
+                                              targetOptions.myrtleOut,
                                               (std::uintptr_t)&targetOptions.tileInfo});
       return thePass;
     });

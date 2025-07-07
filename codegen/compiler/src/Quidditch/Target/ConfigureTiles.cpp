@@ -30,6 +30,7 @@ public:
   using Base::Base;
   ConfigureTiles(const quidditch::ConfigureTilesOptions &options) {
     this->importTiles = options.importTiles;
+    this->myrtleOut = options.myrtleOut;
     this->myrtleMode = options.myrtleMode;
     this->myrtlePath = options.myrtlePath;
     this->tbl = (quidditch::TileInfoTbl *)options.tablePointer;
@@ -43,6 +44,7 @@ private:
   std::string importTiles = "";
   std::string myrtlePath = "";
   std::string myrtleMode = "";
+  std::string myrtleOut = "";
   int acc = 0;
   quidditch::TileInfoTbl *tbl;
 };
@@ -58,10 +60,10 @@ static LogicalResult setTranslationInfo(FunctionOpInterface funcOp) {
 
 static LogicalResult setRootConfig(FunctionOpInterface funcOp,
                                    Operation *rootOp,
-                                   quidditch::TileInfoTbl *tbl, std::string myrtlePath, std::string myrtleMode, std::string importTiles) {
+                                   quidditch::TileInfoTbl *tbl, std::string myrtlePath, std::string myrtleMode, std::string myrtleOut) {
   return TypeSwitch<Operation *, LogicalResult>(rootOp)
       .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
-        std::string tileSizesPath = (importTiles != "") ? importTiles : "myrtle-tiles.json";
+        std::string tileSizesPath = myrtleOut;
         std::string dispatchName = funcOp.getName().str();
         // if myrtle enabled, automatically generate tile sizes
         if (myrtlePath != "") {
@@ -135,7 +137,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         std::stringstream ss("");
         ss << ts;
         funcOp.emitWarning()
-            << "\nAFTER MYRTLE, tiling scheme is " << ss.str() << "\n";
+            << "\nFINAL tiling scheme is " << ss.str() << "\n";
         // set lowering config according to info in table
         setLoweringConfig(rootOp,
         quidditch::Snitch::LoweringConfigAttr::get(
@@ -183,7 +185,7 @@ void ConfigureTiles::runOnOperation() {
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
   // only add the lowering config if one does not exist already
   if (!loweringConfig) {
-    if (failed(setRootConfig(funcOp, rootOperation, tbl, myrtlePath, myrtleMode, importTiles))) {
+    if (failed(setRootConfig(funcOp, rootOperation, tbl, myrtlePath, myrtleMode, myrtleOut))) {
       funcOp.emitWarning()
           << "\nPEPPERMINT: cheesey star set root config failed\n";
       return signalPassFailure();

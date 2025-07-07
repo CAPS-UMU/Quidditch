@@ -115,9 +115,14 @@ bool parseTilingSchemes(TileInfoTbl *tbl, llvm::StringRef fileContent,
     if (!ts.valid) {
       return false;
     } else {
-      tbl->insert(std::pair(func.getFirst().str(), ts));
+      //  only insert the tiling scheme if an entry does not exist already
+      // (NO OVERRIDING KEY-VALUE pairs in the table!!)
+      auto search = tbl->find(func.getFirst().str());
+      if (search == tbl->end()) {
+          tbl->insert(std::pair(func.getFirst().str(), ts));
       ss << func.getFirst().str() << ":\n";
       ss << ts;
+        }
     }
   }
   errs = ss.str();
