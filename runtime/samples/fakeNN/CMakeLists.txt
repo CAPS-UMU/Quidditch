@@ -8,6 +8,7 @@ target_link_libraries(fakeNN_util
     samples_util
     snRuntimeInterface
     Quidditch::dispatch::dispatch
+    Quidditch::time_dispatch::time_dispatch
 )
 target_include_directories(fakeNN_util INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 

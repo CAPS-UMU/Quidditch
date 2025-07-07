@@ -1,6 +1,7 @@
 #include "fakeNN_util.h"
 
 #include <Quidditch/dispatch/dispatch.h>
+#include <Quidditch/time_dispatch/time_dispatch.h>
 
 #include <iree/base/alignment.h>
 

@@ -8,14 +8,15 @@
 # string(APPEND MYRTLE_FLAGS " --iree-quidditch-import-tiles=/home/emily/Quidditch/runtime/samples/grapeFruit/ts-answer.json")
 set( MYRTLE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../myrtle/myrtle.py)
 iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64" M 5 N 6 K 7)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-9-bandaid.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-9-bandaid.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-7-0-600-8.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-7-0-600-8.json)
 add_library(grapeFruit_util grapeFruit_util.c)
 target_link_libraries(grapeFruit_util
     PRIVATE
     samples_util
     snRuntimeInterface
     Quidditch::dispatch::dispatch
+    Quidditch::time_dispatch::time_dispatch
 )
 target_include_directories(grapeFruit_util INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
