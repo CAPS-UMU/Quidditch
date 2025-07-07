@@ -106,7 +106,6 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         SmallVector<int64_t> l1Tiles(3, 0);
         SmallVector<int64_t> l1Interchange = {2, 0, 1};
         bool dualBuffer = false;
-        SmallVector<int64_t> myrtleCost = {};
         // if table of tiling schemes is invalid, throw an error
         if (tbl == 0) {
           funcOp.emitWarning() << "\nPEPPERMINT: Table pointer is zero!!";
@@ -142,7 +141,7 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
         setLoweringConfig(rootOp,
         quidditch::Snitch::LoweringConfigAttr::get(
                               rootOp->getContext(), workgroupTiles, l1Tiles,
-                              l1Interchange, dualBuffer, myrtleCost));
+                              l1Interchange, dualBuffer));
                           return success();
       })
       .Default(success());
