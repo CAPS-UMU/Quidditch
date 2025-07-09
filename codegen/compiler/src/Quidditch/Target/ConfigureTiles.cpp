@@ -58,9 +58,10 @@ static LogicalResult setTranslationInfo(FunctionOpInterface funcOp) {
           IREE::Codegen::DispatchLoweringPassPipeline::None, SymbolRefAttr()));
 }
 
-static LogicalResult setRootConfig(FunctionOpInterface funcOp,
-                                   Operation *rootOp,
-                                   quidditch::TileInfoTbl *tbl, std::string myrtlePath, std::string myrtleMode, std::string myrtleOut) {
+static LogicalResult
+setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
+              quidditch::TileInfoTbl *tbl, std::string myrtlePath,
+              std::string myrtleMode, std::string myrtleOut) {
   return TypeSwitch<Operation *, LogicalResult>(rootOp)
       .Case<linalg::MatmulTransposeBOp>([&](linalg::LinalgOp op) {
         std::string tileSizesPath = myrtleOut;
@@ -71,22 +72,28 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
           if (pid == 0) {
             char *intrepreter = (char *)"python3";
             char *pythonPath = (char *)myrtlePath.c_str();
-            char *pythonArgs[] = {intrepreter, pythonPath, (char*)dispatchName.c_str(),(char *)myrtleMode.c_str(),
-                                  (char *)tileSizesPath.c_str(), NULL};
+            char *pythonArgs[] = {intrepreter,
+                                  pythonPath,
+                                  (char *)dispatchName.c_str(),
+                                  (char *)myrtleMode.c_str(),
+                                  (char *)tileSizesPath.c_str(),
+                                  NULL};
             execvp(intrepreter, pythonArgs);
           }
           int status;
           wait(&status);
-
-        } 
-        // import the tile sizes
-        std::string errs;
-        if(quidditch::fillTileInfoTable(tbl, tileSizesPath, errs) == 0){
-          funcOp.emitWarning()
-                << "\nImporting Tiles failed: \n" << errs << "\n";
+          // import the tile sizes exported from myrtle
+          std::string errs;
+          if (quidditch::fillTileInfoTable(tbl, tileSizesPath, errs) == 0) {
+            funcOp.emitWarning() << "\nImporting Tiles failed: \n"
+                                 << errs << "\n";
             return failure();
-          
+          }else{
+            funcOp.emitWarning() << "\nI just imported \n"
+                                 << errs << "\n";
+          }
         }
+
         // [0]: Always one in our matvec case.
 
         // [1]: How many rows we are processing. Should fit in L1.
@@ -135,14 +142,12 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         std::stringstream ss("");
         ss << ts;
-        funcOp.emitWarning()
-            << "\nFINAL tiling scheme is " << ss.str() << "\n";
+        funcOp.emitWarning() << "\nFINAL tiling scheme is " << ss.str() << "\n";
         // set lowering config according to info in table
-        setLoweringConfig(rootOp,
-        quidditch::Snitch::LoweringConfigAttr::get(
-                              rootOp->getContext(), workgroupTiles, l1Tiles,
-                              l1Interchange, dualBuffer));
-                          return success();
+        setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
+                                      rootOp->getContext(), workgroupTiles,
+                                      l1Tiles, l1Interchange, dualBuffer));
+        return success();
       })
       .Default(success());
 }
@@ -184,7 +189,8 @@ void ConfigureTiles::runOnOperation() {
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
   // only add the lowering config if one does not exist already
   if (!loweringConfig) {
-    if (failed(setRootConfig(funcOp, rootOperation, tbl, myrtlePath, myrtleMode, myrtleOut))) {
+    if (failed(setRootConfig(funcOp, rootOperation, tbl, myrtlePath, myrtleMode,
+                             myrtleOut))) {
       funcOp.emitWarning()
           << "\nPEPPERMINT: cheesey star set root config failed\n";
       return signalPassFailure();
