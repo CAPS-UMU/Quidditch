@@ -88,27 +88,9 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
             funcOp.emitWarning() << "\nImporting Tiles failed: \n"
                                  << errs << "\n";
             return failure();
-          }else{
-            funcOp.emitWarning() << "\nI just imported \n"
-                                 << errs << "\n";
           }
         }
-
-        // [0]: Always one in our matvec case.
-
-        // [1]: How many rows we are processing. Should fit in L1.
-        // Should be as high as possible for subgroup distribution.
-        // Should be a multiple of 8 to be further distributed to compute cores.
-
-        // [2]: Reduction dimension. How many columns are we
-        // processing at once? Cannot be distributed but has a few effects:
-        // * It allows us to make [1] larger by fitting more rows into L1.
-        //   This therefore also gives us more parallelism compute core wise.
-        // * It makes our workgroups larger, reducing dispatch overhead and
-        //   memory bandwidth (by only needing to copy loop invariant memory
-        //   once + needing to copy back the result fewer times). This could
-        //   come at the cost of concurrency for distributing workgroups but is
-        //   only applicable once on Occamy.
+        // if myrtle disabled, assume tiling scheme passed in with --iree-quidditch-import-tiles
         SmallVector<int64_t> workgroupTiles(3, 0);
         SmallVector<int64_t> l1Tiles(3, 0);
         SmallVector<int64_t> l1Interchange = {2, 0, 1};
@@ -139,10 +121,6 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
           return failure();
         }
         dualBuffer = ts.getDualBuffer();
-
-        std::stringstream ss("");
-        ss << ts;
-        funcOp.emitWarning() << "\nFINAL tiling scheme is " << ss.str() << "\n";
         // set lowering config according to info in table
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
                                       rootOp->getContext(), workgroupTiles,
