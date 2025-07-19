@@ -33,7 +33,6 @@ iree_cc_library(
         "ReluToMax.cpp"
         "RemoveTrivialLoops.cpp"
         "TensorTile.cpp"
-        "ZigzagTiling.cpp"
         "TilingScheme.cpp"
         DEPS
         ::PassesIncGen

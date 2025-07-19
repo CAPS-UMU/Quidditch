@@ -15,7 +15,7 @@ TileInfoTbl *fillTileInfoTable(TileInfoTbl *tbl, const std::string &filePath,
   if (!ifs.is_open()) {
     std::stringstream ss;
     ss << "\nTiling Scheme File does not exist or cannot be opened.\n"
-       << "Troublesome file path is " << filePath<< "\n";
+       << "Troublesome file path is " << filePath << "\n";
     errs = ss.str();
     return 0;
   }
@@ -32,56 +32,6 @@ TileInfoTbl *fillTileInfoTable(TileInfoTbl *tbl, const std::string &filePath,
     result = 0;
   }
   ifs.close();
-  return result;
-}
-
-TileInfoTbl *exportTileInfoTable(TileInfoTbl *tbl, const std::string &filePath,
-                                 std::string &errs) {
-  if (tbl == 0) {
-    return 0;
-  }
-  TileInfoTbl *result = tbl;
-  // try to open file
-  std::ofstream ofs(filePath, std::ofstream::out);
-  if (!ofs.is_open()) {
-    std::stringstream ss;
-    ss << "\nTiling Scheme File does not exist or cannot be opened.\n"
-       << "Troublesome file path is " << filePath << "\n";
-    errs = ss.str();
-    return 0;
-  }
-
-  std::map<std::string, int> costMap = {};
-
-  for (const auto &pear : *tbl) {
-    ofs << pear.first <<"\n";
-    // if(pear.second.myrtleCost.size() > 0){
-    //   ofs << pear.second.myrtleCost[0] << " " << pear.second.myrtleCost[1];
-    // }
-    // ofs << "\n\n";
-   // costMap.insert(std::pair<std::string, int>(pear.first, pear.second.myrtleCost[0]));
-  }
-  // auto hoodle = llvm::json::Object(costMap);
-  // auto costMapAsJson = llvm::json::Value({{"hoodle","yodel"},{"yohoho, 5"}});
-  
-  
-  // std::string blank = "";
-  // llvm::raw_string_ostream ros = llvm::raw_string_ostream(blank);
-
-  // llvm::json::OStream J(ros);
-  //   J.array([&] {
-  //   for (const auto &pear : *tbl)
-  //     J.object([&] {
-  //       J.attribute(pear.first, int64_t(4));
-  //       J.attributeArray("myrtleCost", [&] {
-  //         for (int64_t cost : pear.second.myrtleCost)
-  //           J.value(cost);
-  //       });
-  //     });
-  // });
-  //  ofs << ros.str();
-
-  ofs.close();
   return result;
 }
 
@@ -119,10 +69,10 @@ bool parseTilingSchemes(TileInfoTbl *tbl, llvm::StringRef fileContent,
       // (NO OVERRIDING KEY-VALUE pairs in the table!!)
       auto search = tbl->find(func.getFirst().str());
       if (search == tbl->end()) {
-          tbl->insert(std::pair(func.getFirst().str(), ts));
-      ss << func.getFirst().str() << ":\n";
-      ss << ts;
-        }
+        tbl->insert(std::pair(func.getFirst().str(), ts));
+        ss << func.getFirst().str() << ":\n";
+        ss << ts;
+      }
     }
   }
   errs = ss.str();
@@ -130,7 +80,7 @@ bool parseTilingSchemes(TileInfoTbl *tbl, llvm::StringRef fileContent,
 }
 
 struct TilingScheme parseTilingScheme(llvm::json::Value v, std::string &errs) {
-  
+
   struct TilingScheme ts;
   auto O = v.getAsObject();
   if (!O) {
@@ -237,29 +187,6 @@ bool parseBool(llvm::json::Object *obj, std::string boolName, bool &out,
   return true;
 }
 
-// bool TilingScheme::exportWorkloadsToFile() {
-//   if (workloadFileName.compare("") == 0) {
-//     updateErrs("\nCannot export to nameless workload file.\n");
-//     return false;
-//   }
-//   std::fstream fs;
-//   fs.open(workloadFileName,
-//           std::fstream::in | std::fstream::out | std::fstream::app);
-//   fs << workloads;
-//   fs.close();
-//   return true;
-// }
-
-void TilingScheme::setMyrtleCost(llvm::SmallVector<int64_t> &in) {
-  myrtleCost.clear();
-  
-    for (size_t i = 0; i < in.size(); i++) {
-      myrtleCost.push_back(in[i]);
-    }
-  
-  
-}
-
 bool TilingScheme::getTiles_flat(llvm::SmallVector<int64_t> &out) {
   if (out.size() != tiles.size()) {
     return false;
@@ -279,7 +206,7 @@ bool TilingScheme::getOrder_flat(llvm::SmallVector<int64_t> &out) {
       out[i] = (int64_t)order[i][0];
     }
   }
-  
+
   return true;
 }
 
@@ -310,10 +237,6 @@ std::stringstream &operator<<(std::stringstream &ss,
   }
   ss << "]\n";
   ss << "dual buffer: " << ts.dualBuffer << "\n";
-  ss << "myrtle cost: [ ";
-  for (const auto &cost : ts.myrtleCost) {
-    ss << " " << cost << " ";
-  }
   ss << "]\n}";
   return ss;
 }

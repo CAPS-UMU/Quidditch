@@ -93,9 +93,6 @@ struct QuidditchTargetOptions {
   quidditch::TileInfoTbl tileInfo =
       quidditch::TileInfoTbl(); // added for Configure Tiles Pass
   std::string tableInfoErrs = "FROG ";
-  std::string zigzagWorkloads = "";     // added for Configure Using ZigZag Pass
-  std::string zigzagTilingSchemes = ""; // added for Configure Using ZigZag Pass
-  std::string zigzagTilingScheme = "";  // added for ZigZag Tiling Pass
   // TODO: This should actually be 112640 but DMA stack overflows. Ooopsie!
   unsigned l1MemoryBytes = 100000;
 
@@ -144,24 +141,6 @@ struct QuidditchTargetOptions {
     binder.opt<std::string>(
         "iree-quidditch-myrtle-out", myrtleOut, llvm::cl::cat(category),
         llvm::cl::desc("Path to json in which myrtle stores its chosen tile sizes."));
-    // added for Configure Using ZigZag Pass
-    binder.opt<std::string>(
-        "iree-quidditch-zigzag-workloads", zigzagWorkloads,
-        llvm::cl::cat(category),
-        llvm::cl::desc(
-            "Path to a yaml file to which we export zigzag workloads"));
-    // added for Configure Using ZigZag Pass
-    binder.opt<std::string>(
-        "iree-quidditch-zigzag-tiling-schemes", zigzagTilingSchemes,
-        llvm::cl::cat(category),
-        llvm::cl::desc(
-            "Path to the json file representing the ZigZag tiling schemes."));
-    // added for ZigZag Tiling Pass
-    binder.opt<std::string>(
-        "iree-quidditch-zigzag-tiling-scheme", zigzagTilingScheme,
-        llvm::cl::cat(category),
-        llvm::cl::desc(
-            "Path to the json file representing the ZigZag tiling scheme."));
     binder.opt<bool>(
         "iree-quidditch-assert-compiled", assertCompiled,
         llvm::cl::cat(category),

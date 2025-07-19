@@ -101,7 +101,7 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
         bool dualBuffer = false;
         // if table of tiling schemes is invalid, throw an error
         if (tbl == 0) {
-          funcOp.emitWarning() << "\nPEPPERMINT: Table pointer is zero!!";
+          funcOp.emitWarning() << "\nConfigureTiles: Table pointer is zero!!";
           return failure();
         }
         // look up the tile size, interchange, and double buffering settings
@@ -109,18 +109,18 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
         auto search = tbl->find(funcOp.getName().str());
         if (search == tbl->end()) {
           funcOp.emitWarning()
-              << "\nPEPPERMINT: Root operation of this function "
+              << "\nConfigureTiles: Root operation of this function "
                  "is missing tiling scheme!";
           return failure();
         }
         quidditch::TilingScheme &ts = search->second;
         if (!ts.getTiles_flat(l1Tiles)) {
-          funcOp.emitWarning() << "\nPEPPERMINT: Found tiling scheme, but "
+          funcOp.emitWarning() << "\nConfigureTiles: Found tiling scheme, but "
                                   "couldn't get l1 tile list!";
           return failure();
         }
         if (!ts.getOrder_flat(l1Interchange)) {
-          funcOp.emitWarning() << "\nPEPPERMINT: Found tiling scheme, but "
+          funcOp.emitWarning() << "\nConfigureTiles: Found tiling scheme, but "
                                   "couldn't get l1 interchange!";
           return failure();
         }
@@ -174,7 +174,7 @@ void ConfigureTiles::runOnOperation() {
     if (failed(setRootConfig(funcOp, rootOperation, tbl, myrtlePath, myrtleMode,
                              myrtleOut))) {
       funcOp.emitWarning()
-          << "\nPEPPERMINT: cheesey star set root config failed\n";
+          << "\nConfigureTiles: set root config failed\n";
       return signalPassFailure();
     }
   }
@@ -184,7 +184,7 @@ void ConfigureTiles::runOnOperation() {
   RewritePatternSet patterns(funcOp.getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
-    funcOp.emitWarning() << "\nPEPPERMINT: cheesey star apply patterns and "
+    funcOp.emitWarning() << "\nConfigureTiles: apply patterns and "
                             "fold greedily failed\n";
     signalPassFailure();
   }

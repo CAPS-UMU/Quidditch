@@ -30,50 +30,26 @@ def ConfigureForSnitchPass
   : InterfacePass<"quidditch-configure-for-snitch",
       "mlir::FunctionOpInterface">;
 
-// def ConfigureUsingZigzag : InterfacePass<"configure-zigzag-tile", "mlir::FunctionOpInterface"> {
-//   let summary = "Annotate linalg operations with ZigZag Tiling Schemes, OR export linalg ops as ZigZag workloads.";
-//   //let constructor = "createConfigureUsingZigzag()";
-//   let options = [
-//     Option<"tilingSchemes", "tiling-schemes", "std::string", /*default=*/"",
-//            "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
-//     Option<"workloads", "workloads", "std::string", /*default=*/"",
-//            "Name of a yaml file to which we export the zigzag workload representation of each linalg operation.">,
-//   ];
-// }
-//IREE::HAL::ExecutableVariantOp
-//let constructor = "mlir::polygeist::createConvertParallelToGPUPass2()";
-// def ConfigureTiles : Pass<"quidditch-configure-tiles", "mlir::ModuleOp"> {
 def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionOpInterface"> {
   let summary = "Annotate linalg operations with tile sizes";
   let description = [{
-    Within each iree-defined kernel, annotate the root linalg operation with a tiling scheme (tile sizes + loop interchange).
-
-    Alternatively, if the export option is not empty, export all iree-defined kernels 
-    (that contain linalg operations) to a JSON file.
+    Within each iree dispatch, annotate the root linalg operation with a tiling scheme (tile sizes + loop interchange).
+    Caveat: only tiles linalg operations of type matmul_transpose_b (for now)
+    Set the importTiles option if you would like to specify tile sizes for some (or all) of the dispatches.
+    Set the myrtlePath, myrtleMode, and myrtleOut options if you would like myrtle to automatically pick the tile sizes.
   }];
-  // let constructor = "ConfigureTiles(const quidditch::ConfigureTilesOptions &options, bool valid)";
-    let options = [
-    Option<"importTiles", "import-tiling-tiles", "std::string", /*default=*/"",
-           "Name of a JSON file specifying loop bounds and order for each linalg operation.">,
+  let options = [
+    Option<"importTiles", "import-tiles", "std::string", /*default=*/"",
+           "Name of a JSON file specifying loop bounds and order for each root linalg operation.">,
     Option<"myrtleMode", "myrtle-mode", "std::string", /*default=*/"",
            "Tile selection mode for myrtle: sflt, scyc, or svrcyc">,
     Option<"myrtlePath", "myrtle", "std::string", /*default=*/"",
            "Path to Myrtle executable">,
     Option<"myrtleOut", "myrtle-out", "std::string", /*default=*/"",
            "Path to Myrtle output json file">,
-    Option<"tablePointer", "TODORemoveThisOption", "std::uintptr_t", /*default=*/"0",
+    Option<"tablePointer", "NeverPassAValueHere", "std::uintptr_t", /*default=*/"0",
            "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
   ];
-}
-
-def ZigzagTiling : InterfacePass<"zigzag-tile", "mlir::FunctionOpInterface"> {
-  let summary = "Optimize linalg operations according to a ZigZag Tiling Scheme.";
-  //let constructor = "mlir::createZigzagTilingPass()";
-  let options = [
-    Option<"tilingScheme", "tiling-scheme", "std::string", /*default=*/"",
-           "Name of a JSON file specifying loop bounds and order.">,
-  ];
-  //let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect", "scf::SCFDialect"];
 }
 
 def TensorTilePass : InterfacePass<"quidditch-tensor-tile",

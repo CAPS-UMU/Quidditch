@@ -4,13 +4,7 @@
 #include <mlir/IR/BuiltinOps.h>
 #include <mlir/Pass/Pass.h>
 
-// namespace mlir {
-//   std::unique_ptr<mlir::Pass> createZigzagTilingPass();
-
-// }
-
 namespace quidditch {
-
 
 enum class TilingLevel {
   /// Performs tiling within a workgroup to fit all tensors required for the
