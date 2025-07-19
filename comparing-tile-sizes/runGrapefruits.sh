@@ -1,7 +1,7 @@
 echo "runGrapefruits.sh: ATTN: This should only be run by run_experiment.sh"
 here=$(pwd) # save current directory so we can return to it
 # script-specific constants"
-quidditchDir="/home/emily/Quidditch"
+quidditchDir="/home/hoppip/Quidditch"
 tileSizesToTest="$quidditchDir/comparing-tile-sizes/tile-sizes-to-test"
 tileSizes="$quidditchDir/comparing-tile-sizes/tile-sizes-to-test/*.json"
 prologueFile="$quidditchDir/comparing-tile-sizes/cmakelist-prologue.txt"

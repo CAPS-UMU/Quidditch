@@ -1,7 +1,7 @@
 echo "scrutinizeGrapefruits.sh: ATTN: Run this script INSIDE directory Quidditch/comparing-tile-sizes/"
 here=$(pwd) # save current directory so we can return to it
 # script-specific constants
-quidditchDir="/home/emily/Quidditch"
+quidditchDir="/home/hoppip/Quidditch"
 tileSizes="$quidditchDir/comparing-tile-sizes/tile-sizes-to-test/*.json"
 prologueFile="$quidditchDir/comparing-tile-sizes/cmakelist-prologue.txt"
 middleFile="$quidditchDir/comparing-tile-sizes/cmakelist-middle-original.txt"
