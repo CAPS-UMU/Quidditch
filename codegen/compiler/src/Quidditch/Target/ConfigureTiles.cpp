@@ -82,15 +82,16 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
           }
           int status;
           wait(&status);
+          if(status != 0){
+            funcOp.emitWarning() << "\nMyrtle Failed with exit status "<<status<<"\n";
+            return failure();
+          }
           // import the tile sizes exported from myrtle
           std::string errs;
           if (quidditch::fillTileInfoTable(tbl, tileSizesPath, errs) == 0) {
             funcOp.emitWarning() << "\nImporting Tiles failed: \n"
                                  << errs << "\n";
             return failure();
-          }else{
-            funcOp.emitWarning() << "\nI just imported \n"
-                                 << errs << "\n";
           }
         }
 
@@ -141,8 +142,8 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
         dualBuffer = ts.getDualBuffer();
 
         std::stringstream ss("");
-        ss << ts;
-        funcOp.emitWarning() << "\nFINAL tiling scheme is " << ss.str() << "\n";
+        // ss << ts;
+        // funcOp.emitWarning() << "\nFINAL tiling scheme is " << ss.str() << "\n";
         // set lowering config according to info in table
         setLoweringConfig(rootOp, quidditch::Snitch::LoweringConfigAttr::get(
                                       rootOp->getContext(), workgroupTiles,
