@@ -5,6 +5,14 @@
 #include <team_decls.h>
 #include <util/run_model.h>
 
+// void _mlir_ciface_record_cycles(int32_t i) {
+//   if (i == 624) {
+//     printf("\n");
+//   } else {
+//     printf("={ %d }", i);
+//   }
+// }
+
 int main() {
   iree_alignas(64) double data[4];
   if (!snrt_is_dm_core()) return quidditch_dispatch_enter_worker_loop();

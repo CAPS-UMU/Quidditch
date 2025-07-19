@@ -3,6 +3,7 @@
 
 include "mlir/Pass/PassBase.td"
 
+
 def LinkExecutablesPass : Pass<"quidditch-link-executables", "mlir::ModuleOp"> {
   let description = [{
     Combines all `hal.executable.variant`s of the same target into a single
@@ -28,6 +29,28 @@ def PadToTilingConfigPass : Pass<"quidditch-pad-to-tiling-config">;
 def ConfigureForSnitchPass
   : InterfacePass<"quidditch-configure-for-snitch",
       "mlir::FunctionOpInterface">;
+
+def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionOpInterface"> {
+  let summary = "Annotate linalg operations with tile sizes";
+  let description = [{
+    Within each iree dispatch, annotate the root linalg operation with a tiling scheme (tile sizes + loop interchange).
+    Caveat: only tiles linalg operations of type matmul_transpose_b (for now)
+    Set the importTiles option if you would like to specify tile sizes for some (or all) of the dispatches.
+    Set the myrtlePath, myrtleMode, and myrtleOut options if you would like myrtle to automatically pick the tile sizes.
+  }];
+  let options = [
+    Option<"importTiles", "import-tiles", "std::string", /*default=*/"",
+           "Name of a JSON file specifying loop bounds and order for each root linalg operation.">,
+    Option<"myrtleMode", "myrtle-mode", "std::string", /*default=*/"",
+           "Tile selection mode for myrtle: sflt, scyc, or svrcyc">,
+    Option<"myrtlePath", "myrtle", "std::string", /*default=*/"",
+           "Path to Myrtle executable">,
+    Option<"myrtleOut", "myrtle-out", "std::string", /*default=*/"",
+           "Path to Myrtle output json file">,
+    Option<"tablePointer", "NeverPassAValueHere", "std::uintptr_t", /*default=*/"0",
+           "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
+  ];
+}
 
 def TensorTilePass : InterfacePass<"quidditch-tensor-tile",
   "mlir::FunctionOpInterface"> {

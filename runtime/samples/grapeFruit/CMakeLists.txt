@@ -1,0 +1,46 @@
+set( MYRTLE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../myrtle/myrtle/myrtle.py)
+iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64" M 5 N 6 K 7)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-7-0-600-8.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-7-0-600-8.json)
+add_library(grapeFruit_util grapeFruit_util.c)
+target_link_libraries(grapeFruit_util
+    PRIVATE
+    samples_util
+    snRuntimeInterface
+    Quidditch::dispatch::dispatch
+    Quidditch::time_dispatch::time_dispatch
+)
+target_include_directories(grapeFruit_util INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+
+macro(create_experiment_variant)
+  cmake_parse_arguments(_RULE "PRECOMMIT;NIGHTLY" "TARGET;IREE_MODULE;QUERY_FUNC" "" ${ARGN})
+
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${_RULE_TARGET}.c "\
+#include <${_RULE_IREE_MODULE}.h>
+
+#include \"grapeFruit_util.h\"
+
+int main() {
+  return run_grapeFruit_experiment(${_RULE_QUERY_FUNC});
+}
+")
+  add_executable(${_RULE_TARGET} ${CMAKE_CURRENT_BINARY_DIR}/${_RULE_TARGET}.c)
+  target_link_libraries(
+      ${_RULE_TARGET}
+      PRIVATE
+      grapeFruit_util
+      ${_RULE_IREE_MODULE}
+      snRuntime
+  )
+endmacro()
+
+create_experiment_variant(
+    TARGET GrapeFruit
+    IREE_MODULE grapeFruit
+    QUERY_FUNC "quidditch_compiled_ns_net2_linked_quidditch_library_query"
+)
+create_experiment_variant(
+    TARGET GrapeFruitLLVM
+    IREE_MODULE grapeFruit_llvm
+    QUERY_FUNC "compiled_ns_net2_linked_llvm_cpu_library_query"
+)

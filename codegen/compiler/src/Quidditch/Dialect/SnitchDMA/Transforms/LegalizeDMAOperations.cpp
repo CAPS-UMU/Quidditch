@@ -9,6 +9,11 @@
 #include "Quidditch/Dialect/DMA/IR/DMADialect.h"
 #include "Quidditch/Dialect/DMA/IR/DMAOps.h"
 
+// debugging Raddish
+#include <sstream>
+#include <string>              // for string compare
+// debugging Raddish
+
 namespace quidditch::SnitchDMA {
 #define GEN_PASS_DEF_LEGALIZEDMAOPERATIONSPASS
 #include "Quidditch/Dialect/SnitchDMA/Transforms/Passes.h.inc"
@@ -114,13 +119,28 @@ namespace {
 /// Remove outer unit dimensions.
 struct RankReduceStartTransferOp : OpRewritePattern<StartTransferOp> {
 
+  
+
   using OpRewritePattern<StartTransferOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(StartTransferOp op,
                                 PatternRewriter &rewriter) const override {
+    std::stringstream ss; // for debugging
     MemRefType type = op.getSource().getType();
-    if (type.getShape().size() <= 1 || type.getShape().front() != 1)
+    if (type.getShape().size() <= 1 || type.getShape().front() != 1){
+      // if(type.getShape().size() <= 1){
+      //   ss<<"RADDISH PROBLEM: type.getShape().size() "<< type.getShape().size()<<" is NOT <= 1\n";
+
+      // }
+      // if(type.getShape().front() != 1){
+      //   ss<<"RADDISH PROBLEM: type.getShape().front() = "<< type.getShape().front()<<" is NOT 1\n";
+
+      // }
+      // ss << "\nRADDISH: (legalize DMA operations) failed to remove outer unit dimensions\n";
+      // op.emitWarning()<<ss.str();
       return failure();
+    }
+      
 
     SmallVector<OpFoldResult> sizes =
         memref::getMixedSizes(rewriter, op->getLoc(), op.getSource());
@@ -146,21 +166,28 @@ struct CollapseStartTransferOp : OpRewritePattern<StartTransferOp> {
   LogicalResult matchAndRewrite(StartTransferOp op,
                                 PatternRewriter &rewriter) const override {
     // Must be handled by the rank reduce pattern.
-    if (op.getSource().getType().getShape().front() == 1)
+    if (op.getSource().getType().getShape().front() == 1){
+      op.emitWarning()<<"\nRADDISH: (legalize DMA operations) rank reduce problem failure\n";
       return failure();
+    }
 
     FailureOr<size_t> sourceNonContiguous =
         getNumNonContiguousOuterDims(op.getSource().getType());
     FailureOr<size_t> destNonContiguous =
         getNumNonContiguousOuterDims(op.getDest().getType());
-    if (failed(sourceNonContiguous) || failed(destNonContiguous))
+    if (failed(sourceNonContiguous) || failed(destNonContiguous)){
+      op.emitWarning()<<"\nRADDISH: (legalize DMA operations) nonContiguous memory error\n";
       return failure();
+    }
+      
 
     size_t sharedNonContiguous =
         std::max(*sourceNonContiguous, *destNonContiguous);
     // A missing contiguous dimension is handled by the expansion pattern.
-    if (sharedNonContiguous == op.getSource().getType().getRank())
+    if (sharedNonContiguous == op.getSource().getType().getRank()){
+      op.emitWarning()<<"\nRADDISH: (legalize DMA operations) shared non-contiguous error\n";
       return failure();
+      }
 
     TypedValue<MemRefType> source = op.getSource();
     TypedValue<MemRefType> dest = op.getDest();
@@ -246,18 +273,20 @@ struct ExpandStartTransferOp : OpRewritePattern<StartTransferOp> {
         getNumNonContiguousOuterDims(op.getSource().getType());
     FailureOr<size_t> destNonContiguous =
         getNumNonContiguousOuterDims(op.getDest().getType());
-    if (failed(sourceNonContiguous) || failed(destNonContiguous))
+    if (failed(sourceNonContiguous) || failed(destNonContiguous)){
+      op.emitWarning()<<"\nRADDISH: (legalize DMA operations) failed to add contiguous inner unit\n";
       return failure();
-
+    }
     size_t sharedNonContiguous =
         std::max(*sourceNonContiguous, *destNonContiguous);
 
     TypedValue<MemRefType> source = op.getSource();
     TypedValue<MemRefType> dest = op.getDest();
     // Nothing to do if contiguous inner dims exist.
-    if (sharedNonContiguous != source.getType().getRank())
+    if (sharedNonContiguous != source.getType().getRank()){
+     // op.emitWarning()<<"\nRADDISH: (legalize DMA operations) failed to add contiguous inner unit somehow :(\n";
       return failure();
-
+    }
     SmallVector<ReassociationIndices> reAssociation(sharedNonContiguous);
     for (unsigned index : llvm::seq(sharedNonContiguous))
       reAssociation[index].push_back(index);
@@ -288,6 +317,8 @@ void LegalizeDMAOperations::runOnOperation() {
   patterns.insert<CollapseStartTransferOp, RankReduceStartTransferOp,
                   ExpandStartTransferOp>(&getContext());
   if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
+          applyPartialConversion(getOperation(), target, std::move(patterns)))){
+    getOperation()->emitWarning()<<"\nRADDISH: (legalize DMA operations) applyPartialConversion failed!\n";
     signalPassFailure();
+   }
 }

@@ -1,0 +1,130 @@
+# main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64
+
+[back to landing page](zigzag-tiled-nsnet/README.md)
+
+Original Linalg Operation:
+
+```
+%23 = linalg.matmul_transpose_b {lowering_config = #quidditch_snitch.lowering_config<
+l1_tiles = [0, 40, 100], 
+l1_tiles_interchange = [2, 0, 1], 
+dual_buffer = true>}
+ins(%18, %19 : tensor<1x400xf64>, tensor<1200x400xf64>) 
+outs(%22 : tensor<1x1200xf64>) -> tensor<1x1200xf64>
+```
+
+In pseudocode, this operation looks like
+
+```
+matmul_transpose_b (I : tensor<1x400xf64, W : tensor<1200x400xf64>, O : tensor<1x1200xf64>) {
+    for a in [0, 1)
+    for c in [0, 1200)
+    for b in [0, 400)
+        O[a][b]+=I[a][c]*transpose(W)[b][c]
+}
+```
+
+Representation as ZigZag Workload:
+
+```
+- id: 0 
+  name: dispatch_1_matmul_transpose_b_1x1200x400_f64  # name can be used to specify mapping
+  operator_type: MatMul # operator_type can be used to specify mapping
+  equation: O[a][b]+=I[a][c]*W[b][c]
+  dimension_relations: []
+  loop_dims: [A,B,C]
+  loop_sizes: [1, 400, 1200] 
+  operand_precision:
+    W: 64
+    I: 64
+    O: 64
+    O_final: 64
+  operand_source:
+    I: 0
+    W: 0
+```
+
+[ZigZag Hardware Description](https://github.com/EmilySillars/zigzag/blob/manual-examples/zigzag/inputs/hardware/snitch-cluster-only-floats-no-ssrs.yaml)
+
+ZigZag output:
+
+```
+=============================================================================================
+Temporal Loops                      O                  W                  I                  
+=============================================================================================
+for C in [0, 5):                    l1                 l3                 l1                 
+---------------------------------------------------------------------------------------------
+  for B in [0, 16):                 l1                 l3                 l1                 
+---------------------------------------------------------------------------------------------
+    for C in [0, 5):                rf_f0_thru_f31     l1                 l1                 
+---------------------------------------------------------------------------------------------
+      for C in [0, 6):              rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+        for B in [0, 5):            rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+          for B in [0, 5):          rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+=============================================================================================
+Spatial Loops                                                                                
+=============================================================================================
+            parfor C in [0, 8):                                                              
+---------------------------------------------------------------------------------------------
+            parfor C in [0, 1):                                                              
+---------------------------------------------------------------------------------------------
+```
+
+**loop_sizes:** [1, 400, 1200]  /  [1,  16, 5] = tile sizes of  **[1, 25, 240]**
+
+but remember, when putting in `ConfigureForSnitch.cpp`, tile sizes should be **[1, 240, 25]**!
+
+**interchange:** `l1Interchange = {0, 2, 1};`
+
+Performance Comparison:
+
+GrapeFruit (NsNet with one ZigZag-tiled layer): cycles 1525861
+
+NsNet2: cycles 1526186
+
+1526186 - 1525861= **325 cycles faster with ZigZag**
+
+## old notes with incorrect loop_dims [1, 1200, 400] 
+
+ZigZag Output
+
+```
+Loop ordering for dispatch_1_matmul_transpose_b_1x1200x400_f64
+=============================================================================================
+Temporal Loops                      O                  W                  I                  
+=============================================================================================
+for C in [0, 5):                    l1                 l3                 l1                 
+---------------------------------------------------------------------------------------------
+  for B in [0, 5):                  l1                 l3                 l1                 
+---------------------------------------------------------------------------------------------
+    for C in [0, 5):                rf_f0_thru_f31     l1                 l1                 
+---------------------------------------------------------------------------------------------
+      for C in [0, 16):             rf_f0_thru_f31     l1                 l1                 
+---------------------------------------------------------------------------------------------
+        for B in [0, 6):            rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+          for B in [0, 5):          rf_f0_thru_f31     l1                 rf_f0_thru_f31     
+---------------------------------------------------------------------------------------------
+=============================================================================================
+Spatial Loops                                                                                
+=============================================================================================
+            parfor B in [0, 8):                                                              
+---------------------------------------------------------------------------------------------
+            parfor B in [0, 1):                                                              
+---------------------------------------------------------------------------------------------
+```
+
+We only care about L1, so this plan really means
+
+```
+matmul_transpose_b (I : tensor<1x400xf64, W : tensor<1200x400xf64>, O : tensor<1x1200xf64>) {
+    for a in [0, 1)
+    for c in [0, 5)
+    for b in [0, 5)
+        O[a][b]+=I[a][c]*W[b][c]
+}
+```
+
