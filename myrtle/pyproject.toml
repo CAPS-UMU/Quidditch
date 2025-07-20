@@ -1,0 +1,20 @@
+[project]
+name = "myrtle"
+version = "0.1.0"
+description = "Tiling Cost Model for Snitch"
+readme = "README.md"
+requires-python = "==3.11.*"
+dependencies = [
+    "numpy==2.3.1",
+    "pandas==2.2.2",
+    "scikit-learn==1.7.0",
+    "matplotlib>=3.10.1",
+    "pyqt6==6.9.1",
+    "pyqt6-qt6==6.9.1",
+    "pyqt6-sip==13.10.2"
+]
+
+[dependency-groups]
+dev = [
+    "marimo==0.13.11"
+]

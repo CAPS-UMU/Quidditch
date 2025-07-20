@@ -155,15 +155,17 @@ endfunction()
 # The python script should take one positional argument, which is the 'DST'
 # argument and output the MLIR file there. Additionally the 'DTYPE' flag is
 # communicated via a `--dtype=` flag.
+# For the FakeNN sample test case, 'M', 'N' and 'K' should be integers that
+# set the dimensions of the single linear layer. We use --M, --N, and --K to specify them.
 macro(iree_turbine)
-  cmake_parse_arguments(_RULE "" "SRC;DTYPE;DST" "" ${ARGN})
+  cmake_parse_arguments(_RULE "" "SRC;DTYPE;M;N;K;DST" "" ${ARGN})
 
   cmake_path(GET _RULE_SRC STEM filename)
   cmake_path(ABSOLUTE_PATH _RULE_SRC BASE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE source_path)
 
   add_custom_command(
       OUTPUT ${_RULE_DST}
-      COMMAND ${Python3_EXECUTABLE} ${source_path} ${_RULE_DST} --dtype=${_RULE_DTYPE}
+      COMMAND ${Python3_EXECUTABLE} ${source_path} ${_RULE_DST} --dtype=${_RULE_DTYPE} --m=${_RULE_M} --n=${_RULE_N} --k=${_RULE_K}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       DEPENDS ${_RULE_SRC}
       COMMENT "Translating ${filename} using iree-turbine"

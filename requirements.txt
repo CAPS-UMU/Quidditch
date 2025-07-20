@@ -2,3 +2,4 @@
 -r runtime/requirements.txt
 -r runtime/samples/nsnet2/requirements.txt
 -e xdsl
+-e myrtle

@@ -58,6 +58,7 @@ target_include_directories(snRuntimeInterface
     ${snRuntimeSrc}/sw/deps/riscv-opcodes
     ${CMAKE_CURRENT_LIST_DIR}/api
 )
+#/home/hoppip/Quidditch/snitch_cluster/target/snitch_cluster/sw/runtime/rtl/src/snrt.h RADDISH
 # Required while snRuntime uses 'inline' qualifiers for declarations.
 target_compile_options(snRuntimeInterface INTERFACE -Wno-undefined-inline)
 
