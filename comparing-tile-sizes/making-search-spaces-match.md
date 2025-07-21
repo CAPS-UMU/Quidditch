@@ -76,9 +76,68 @@ main$async_dispatch_7_matmul_transpose_b_1x600x400_f64 : 720000 15
    . run_experiment.sh "1x600x600wm-n-k_case1_searchSpace.csv" "1x600x600wm-n-k" no no run no 1 "main\$async_dispatch_8_matmul_transpose_b_1x600x600_f64"
    ```
 
-   
+
+## Debugging
+
+generate jsons
+
+```
+. run_experiment.sh "1x600x600wm-n-k_case1_searchSpace-debug.csv" "1x600x600wm-n-k" genJsons no no no 1 "main\$async_dispatch_8_matmul_transpose_b_1x600x600_f64"
+. run_experiment.sh "1x600x400wm-n-k_case1_searchSpace-debug.csv" "1x600x400wm-n-k" genJsons no no no 1 "main\$async_dispatch_7_matmul_transpose_b_1x600x400_f64"
+```
+
+compile
+
+```
+. run_experiment.sh "1x600x600wm-n-k_case1_searchSpace-debug.csv" "1x600x600wm-n-k" no compile no no 1 "main\$async_dispatch_8_matmul_transpose_b_1x600x600_f64"
+. run_experiment.sh "1x600x400wm-n-k_case1_searchSpace-debug.csv" "1x600x400wm-n-k" no compile no no 1 "main\$async_dispatch_7_matmul_transpose_b_1x600x400_f64"
+```
+
+run
+```
+. run_experiment.sh "1x600x600wm-n-k_case1_searchSpace-debug.csv" "1x600x600wm-n-k" no no run no 1 "main\$async_dispatch_8_matmul_transpose_b_1x600x600_f64"
+```
 
 
+
+## segfaults
+
+```
+starting new batch...
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-8/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-10/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-16/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-20/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-25/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-40/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-50/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-80/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-40-100/GrapeFruit
+/home/hoppip/Quidditch/comparing-tile-sizes/1x600x400wm-n-k/0-120-8/GrapeFruit
+[1]   Segmentation fault      (core dumped) nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[2]   Done                    nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[3]   Done                    nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[4]   Done                    nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[5]   Segmentation fault      (core dumped) nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[6]   Segmentation fault      (core dumped) nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[7]   Segmentation fault      (core dumped) nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[8]   Done                    nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[9]-  Segmentation fault      (core dumped) nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+[10]+  Done                    nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt"  (wd: ~/Quidditch/toolchain/bin)
+(wd now: ~/Quidditch/comparing-tile-sizes)
+
+```
+
+9,7,6,5
 
 ## to run
 
