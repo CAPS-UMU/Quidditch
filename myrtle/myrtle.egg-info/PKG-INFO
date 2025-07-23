@@ -1,3 +1,19 @@
+Metadata-Version: 2.4
+Name: myrtle
+Version: 0.1.0
+Summary: Tiling Cost Model for Snitch
+Requires-Python: ==3.11.*
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy==2.3.1
+Requires-Dist: pandas==2.2.2
+Requires-Dist: scikit-learn==1.7.0
+Requires-Dist: matplotlib>=3.10.1
+Requires-Dist: pyqt6==6.9.1
+Requires-Dist: pyqt6-qt6==6.9.1
+Requires-Dist: pyqt6-sip==13.10.2
+Dynamic: license-file
+
 # myrtle
 tiling cost model for the snitch cluster!
 
