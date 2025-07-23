@@ -71,18 +71,18 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
         if (search == tbl->end()) {
           funcOp.emitWarning()
               << "\nConfigureTiles: Root operation of this dispatch "
-                 "is a missing tiling scheme!";
+                 "is a missing tiling scheme";
           return failure();
         }
         quidditch::TilingScheme &ts = search->second;
         if (!ts.getTiles_flat(l1Tiles)) {
           funcOp.emitWarning() << "\nConfigureTiles: Found tiling scheme, but "
-                                  "couldn't get l1 tile list!";
+                                  "couldn't get l1 tile list";
           return failure();
         }
         if (!ts.getOrder_flat(l1Interchange)) {
           funcOp.emitWarning() << "\nConfigureTiles: Found tiling scheme, but "
-                                  "couldn't get l1 interchange!";
+                                  "couldn't get l1 interchange";
           return failure();
         }
         dualBuffer = ts.getDualBuffer();
@@ -97,19 +97,14 @@ setRootConfig(FunctionOpInterface funcOp, Operation *rootOp,
 
 void ConfigureTiles::runOnOperation() {
   FunctionOpInterface funcOp = getOperation();
-
-  // TODO: un-comment out check for translationInfo, instead of blindly
-  // overwriting it.
   if (getTranslationInfo(funcOp))
     return;
 
   SmallVector<Operation *> computeOps = getComputeOps(funcOp);
   FailureOr<Operation *> rootOp = getRootOperation(computeOps);
-
   if (failed(rootOp)) {
     return signalPassFailure();
   }
-
   Operation *rootOperation = rootOp.value();
   if (!rootOperation) {
     return;
@@ -122,10 +117,9 @@ void ConfigureTiles::runOnOperation() {
     return signalPassFailure();
   }
 
-  // annotate linalg ops with tile sizes
+  // Annotate root linalg ops with tile sizes
   auto loweringConfig =
       getLoweringConfig<quidditch::Snitch::LoweringConfigAttr>(rootOperation);
-  // only add the lowering config if one does not exist already
   if (!loweringConfig) {
     if (failed(setRootConfig(funcOp, rootOperation, tbl))) {
       funcOp.emitWarning()

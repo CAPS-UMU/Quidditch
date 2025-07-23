@@ -84,7 +84,7 @@ struct QuidditchTargetOptions {
   std::string xDSLOptPath;
   std::string toolChainRoot;
   bool assertCompiled = false;
-  std::string importTiles = "";  // added for Configure Tiles Pass
+  std::string importTiles = ""; // added for Configure Tiles Pass
   quidditch::TileInfoTbl tileInfo =
       quidditch::TileInfoTbl(); // added for Configure Tiles Pass
   // TODO: This should actually be 112640 but DMA stack overflows. Ooopsie!
@@ -190,10 +190,9 @@ public:
       std::string errs;
       quidditch::fillTileInfoTable(&targetOptions.tileInfo,
                                    targetOptions.importTiles, errs);
-      
     }
 
-    // automatically tile the rest of the dispatches
+    // automatically tile the dispatches
     funcPassManager.addPass([&] {
       auto thePass = quidditch::createConfigureTiles(
           {targetOptions.importTiles, (std::uintptr_t)&targetOptions.tileInfo});

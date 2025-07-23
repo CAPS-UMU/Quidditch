@@ -41,7 +41,7 @@ def ConfigureTiles : InterfacePass<"quidditch-configure-tiles", "mlir::FunctionO
     Option<"importTiles", "import-tiles", "std::string", /*default=*/"",
            "Name of a JSON file specifying loop bounds and order for each root linalg operation.">,
     Option<"tablePointer", "NeverPassAValueHere", "std::uintptr_t", /*default=*/"0",
-           "Hacky way to prevent opening input file multiple times. Never pass a value to this option.">,
+           "Avoids opening the input file multiple times. Never pass a value to this option via the command line.">,
   ];
 }
 
