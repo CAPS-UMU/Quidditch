@@ -411,15 +411,6 @@ void ComputeCoreIndexOp::replaceWithNoop(RewriterBase &rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
-// MyrtleRecordCyclesOp::DMACoreSpecializationOpInterface
-//===----------------------------------------------------------------------===//
-
-void MyrtleRecordCyclesOp::replaceWithNoop(RewriterBase &rewriter) {
-  // Not sure this is how I should implement this function for MyrtleRecordCycles
-  rewriter.eraseOp(*this);
-}
-
-//===----------------------------------------------------------------------===//
 // PipelineOp
 //===----------------------------------------------------------------------===//
 

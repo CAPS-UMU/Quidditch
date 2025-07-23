@@ -17,3 +17,5 @@ build-notes/*
 build/*
 toolchain/*
 fakeNN/*
+
+comparing-tiling-schemes/*

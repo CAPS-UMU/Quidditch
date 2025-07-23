@@ -84,14 +84,9 @@ struct QuidditchTargetOptions {
   std::string xDSLOptPath;
   std::string toolChainRoot;
   bool assertCompiled = false;
-  std::string timeDispatch = ""; // added for Specialize DMA Code Pass
   std::string importTiles = "";  // added for Configure Tiles Pass
-  std::string myrtleMode = "";   // added for Configure Tiles Pass
-  std::string myrtlePath = "";   // added for Configure Tiles Pass
-  std::string myrtleOut = "";
   quidditch::TileInfoTbl tileInfo =
       quidditch::TileInfoTbl(); // added for Configure Tiles Pass
-  std::string tableInfoErrs = "FROG ";
   // TODO: This should actually be 112640 but DMA stack overflows. Ooopsie!
   unsigned l1MemoryBytes = 100000;
 
@@ -119,26 +114,11 @@ struct QuidditchTargetOptions {
         "iree-quidditch-toolchain-root", toolChainRoot, llvm::cl::cat(category),
         llvm::cl::desc("Path to the root directory of the Quidditch toolchain "
                        "(containing the toolchain file)"));
-    // added for SpecializeDMACode Pass (to record dispatch cycles for myrtle)
-    binder.opt<std::string>(
-        "iree-quidditch-time-disp", timeDispatch, llvm::cl::cat(category),
-        llvm::cl::desc("Flag to enable timing dispatches for myrtle"));
     // added for Configure Tiles Pass
     binder.opt<std::string>(
         "iree-quidditch-import-tiles", importTiles, llvm::cl::cat(category),
         llvm::cl::desc(
             "Path to a JSON file from which we import tiling schemes"));
-    binder.opt<std::string>(
-        "iree-quidditch-myrtle-mode", myrtleMode, llvm::cl::cat(category),
-        llvm::cl::desc(
-            "Choose tile selection method with sflt, scyc, or svrcyc."));
-    binder.opt<std::string>("iree-quidditch-myrtle", myrtlePath,
-                            llvm::cl::cat(category),
-                            llvm::cl::desc("Complete path to myrtle script"));
-    binder.opt<std::string>(
-        "iree-quidditch-myrtle-out", myrtleOut, llvm::cl::cat(category),
-        llvm::cl::desc(
-            "Path to json in which myrtle stores its chosen tile sizes."));
     binder.opt<bool>(
         "iree-quidditch-assert-compiled", assertCompiled,
         llvm::cl::cat(category),
@@ -210,14 +190,13 @@ public:
       std::string errs;
       quidditch::fillTileInfoTable(&targetOptions.tileInfo,
                                    targetOptions.importTiles, errs);
+      
     }
 
     // automatically tile the rest of the dispatches
     funcPassManager.addPass([&] {
       auto thePass = quidditch::createConfigureTiles(
-          {targetOptions.importTiles, targetOptions.myrtleMode,
-           targetOptions.myrtlePath, targetOptions.myrtleOut,
-           (std::uintptr_t)&targetOptions.tileInfo});
+          {targetOptions.importTiles, (std::uintptr_t)&targetOptions.tileInfo});
       return thePass;
     });
   }
@@ -302,8 +281,7 @@ public:
         .addPass(createLinalgGeneralizeNamedOpsPass)
         .addPass(quidditch::createRemoveTrivialLoopsPass);
 
-    modulePassManager.addPass(quidditch::Snitch::createSpecializeDMACodePass(
-        {targetOptions.timeDispatch}));
+    modulePassManager.addPass(quidditch::Snitch::createSpecializeDMACodePass());
     FunctionLikeNest(modulePassManager)
         .addPass(quidditch::SnitchDMA::createLegalizeDMAOperationsPass)
         .addPass(createCanonicalizerPass)

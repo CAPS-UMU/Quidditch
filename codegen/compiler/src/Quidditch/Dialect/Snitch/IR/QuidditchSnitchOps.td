@@ -214,45 +214,6 @@ def QuidditchSnitch_ComputeCoreIndexOp
   }];
 }
 
-// AllTypesMatch<["init_args", "results"]
-// let arguments = (ins
-//     Index:$lower_bound,
-//     Index:$upper_bound,
-//     Index:$step,
-//     Variadic<AnyRankedTensor>:$init_args
-//   );
-//attr-dict $tensor_type `->` type($results)
-  // let assemblyFormat = [{
-  //   $lhs `,` $rhs `,` $acc attr-dict
-  //   `:` type($lhs) `,` type($rhs) `into` type($acc)
-  // }];
-
-def QuidditchSnitch_MyrtleRecordCyclesOp
-  : QuidditchSnitch_Op<"myrtle_record_cycles", [AllTypesMatch<["i", "j"]>,
-      QuidditchSnitch_DMACoreSpecializationOpInterface]> {
-
-  let description = [{
-    Saves current number of cycles in global array myrtle_actual_cycles[i][j],
-    where i represents a specific kernel, and j represents whether we are
-    at the start or end of that kernel.
-  }];
-
-  let arguments = (ins
-    I32:$i,
-    I32:$j
-  );
-
-  // let results = (outs Index:$result);
-
-  let assemblyFormat = [{
-    $i `,` $j attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    void replaceWithNoop(mlir::RewriterBase& rewriter);
-  }];
-}
-
 def QuidditchSnitch_PipelineOp : QuidditchSnitch_Op<"pipeline",
   [AllTypesMatch<["init_args", "results"]>,
    RecursivelySpeculatable, RecursiveMemoryEffects,

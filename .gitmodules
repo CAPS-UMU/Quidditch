@@ -7,6 +7,3 @@
 [submodule "xdsl"]
 	path = xdsl
 	url = https://github.com/xdslproject/xdsl
-[submodule "myrtle"]
-	path = myrtle
-	url = https://github.com/CAPS-UMU/myrtle.git

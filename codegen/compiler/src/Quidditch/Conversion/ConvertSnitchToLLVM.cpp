@@ -176,24 +176,6 @@ struct ComputeCoreIndexOpLowering : ConvertOpToLLVMPattern<ComputeCoreIndexOp> {
   }
 };
 
-struct MyrtleRecordCyclesOpLowering : ConvertOpToLLVMPattern<MyrtleRecordCyclesOp> {
-
-  LLVM::LLVMFuncOp myrtleRecordCyclesFunc;
-
-  MyrtleRecordCyclesOpLowering(LLVM::LLVMFuncOp myrtleRecordCyclesFunc,
-                             const LLVMTypeConverter &converter)
-      : ConvertOpToLLVMPattern(converter),
-        myrtleRecordCyclesFunc(myrtleRecordCyclesFunc) {}
-  LogicalResult
-  matchAndRewrite(MyrtleRecordCyclesOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, myrtleRecordCyclesFunc,
-                                              ValueRange({op.getI(), op.getJ()}));
-    return success();
-  }
-};
-
-
 } // namespace
 
 void quidditch::populateSnitchToLLVMConversionPatterns(
@@ -201,26 +183,15 @@ void quidditch::populateSnitchToLLVMConversionPatterns(
     RewritePatternSet &patterns) {
 
   auto builder = OpBuilder::atBlockEnd(moduleOp.getBody());
-  // snrt cluster core idx
   IntegerType i32 = builder.getI32Type();
   auto computeCoreIndex = builder.create<LLVM::LLVMFuncOp>(
       builder.getUnknownLoc(), "snrt_cluster_core_idx",
       LLVM::LLVMFunctionType::get(i32, ArrayRef<Type>{}));
   computeCoreIndex->setAttr("hal.import.bitcode", builder.getUnitAttr());
-  // myrtle record cycles
-  auto myrtleFnType = LLVM::LLVMFunctionType::get(
-            builder.getType<LLVM::LLVMVoidType>(),
-            {i32, i32},
-            /*isVarArg=*/false);
-  auto myrtleRecordCycles = builder.create<LLVM::LLVMFuncOp>(
-      builder.getUnknownLoc(), "myrtle_record_cycles",
-      myrtleFnType);
-  myrtleRecordCycles->setAttr("hal.import.bitcode", builder.getUnitAttr());
 
   patterns.insert<L1MemoryViewOpLowering, BarrierOpLowering,
                   MicrokernelFenceOpLowering>(typeConverter);
   patterns.insert<ComputeCoreIndexOpLowering>(computeCoreIndex, typeConverter);
-  patterns.insert<MyrtleRecordCyclesOpLowering>(myrtleRecordCycles, typeConverter);
   patterns.insert<CallMicrokernelOpLowering>(SymbolTable(moduleOp),
                                              typeConverter);
 }

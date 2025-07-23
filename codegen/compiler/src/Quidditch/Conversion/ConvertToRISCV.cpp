@@ -31,8 +31,6 @@ protected:
 private:
   FailureOr<StringAttr> convertToRISCVAssembly(MemRefMicrokernelOp kernelOp,
                                                StringAttr kernelName);
-  FailureOr<StringAttr> convertToRISCVAssemblyMyrtle(MemRefMicrokernelOp kernelOp,
-                                               StringAttr kernelName);
 };
 } // namespace
 
@@ -53,97 +51,6 @@ static Type transformType(Type type) {
 
   return MemRefType::get(memRefType.getShape(), memRefType.getElementType(),
                          strideReplacement, memRefType.getMemorySpace());
-}
-
-FailureOr<StringAttr>
-ConvertToRISCV::convertToRISCVAssemblyMyrtle(MemRefMicrokernelOp kernelOp,
-                                       StringAttr kernelName) {
-  if (!llvm::all_of(kernelOp.getBody().getArgumentTypes(),
-                    CallMicrokernelOp::supportsArgumentType)) {
-    auto emit = assertCompiled ? &MemRefMicrokernelOp::emitError
-                               : &MemRefMicrokernelOp::emitWarning;
-
-    (kernelOp.*emit)("function inputs ")
-        << kernelOp.getBody().getArgumentTypes()
-        << " do not support bare-pointer calling convention required by "
-           "xDSL.";
-    return failure();
-  }
-
-  SmallVector<Type> argumentTypes =
-      llvm::map_to_vector(kernelOp.getBody().getArgumentTypes(), transformType);
-
-  OpBuilder builder(&getContext());
-  OwningOpRef<func::FuncOp> tempFuncOp =
-      builder.create<func::FuncOp>(kernelOp.getLoc(), kernelName,
-                                   builder.getFunctionType(argumentTypes, {}));
-  IRMapping mapping;
-  kernelOp.getBody().cloneInto(&tempFuncOp->getBody(), mapping);
-  for (BlockArgument argument : tempFuncOp->getArguments())
-    argument.setType(transformType(argument.getType()));
-
-  builder.setInsertionPointToEnd(&tempFuncOp->getBody().back());
-
-  builder.create<func::ReturnOp>(kernelOp.getLoc());
-
-  SmallString<64> stdinFile;
-  int stdinFd;
-  if (llvm::sys::fs::createTemporaryFile("xdsl-in", "mlir", stdinFd, stdinFile))
-    return failure();
-
-  llvm::FileRemover stdinFileRemove(stdinFile);
-  {
-    llvm::raw_fd_ostream ss(stdinFd, /*shouldClose=*/true);
-    tempFuncOp->print(ss, OpPrintingFlags().useLocalScope());
-  }
-
-  SmallString<64> stdoutFile;
-  if (llvm::sys::fs::createTemporaryFile("xdsl-out", "S", stdoutFile))
-    return failure();
-
-  llvm::FileRemover stdoutFileRemove(stdoutFile);
-
-  SmallString<64> stderrFile;
-  if (llvm::sys::fs::createTemporaryFile("xdsl-diag", "S", stderrFile))
-    return failure();
-
-  llvm::FileRemover stderrFileRemove(stderrFile);
-
-  std::optional<llvm::StringRef> redirects[3] = {/*stdin=*/stdinFile.str(),
-                                                 /*stdout=*/stdoutFile.str(),
-                                                 /*stderr=*/stderrFile.str()};
-  int ret = llvm::sys::ExecuteAndWait(
-      xDSLOptPath,
-      {xDSLOptPath, "-p",
-       "arith-add-fastmath,"
-       "convert-linalg-to-memref-stream,"
-       "test-optimise-memref-stream," // NOLINT(*-suspicious-missing-comma)
-       "test-lower-memref-stream-to-snitch-stream,"
-       "test-lower-snitch-stream-to-asm",
-       "-t", "riscv-asm"},
-      std::nullopt, redirects);
-  
-
-  if (ret != 0) {
-    auto diagEmit =
-        assertCompiled ? &Operation::emitError : &Operation::emitWarning;
-
-    InFlightDiagnostic diag =
-        ((kernelOp)->*diagEmit)("Failed to translate kernel with xDSL");
-
-    if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
-            llvm::MemoryBuffer::getFile(stderrFile, /*IsText=*/true))
-      diag.attachNote() << "stderr:\n" << buffer.get()->getBuffer();
-
-    return diag;
-  }
-
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
-      llvm::MemoryBuffer::getFile(stdoutFile, /*IsText=*/true);
-  if (!buffer)
-    return kernelOp.emitError("failed to open ") << stdoutFile;
-
-  return StringAttr::get(&getContext(), (*buffer)->getBuffer());
 }
 
 FailureOr<StringAttr>
@@ -238,7 +145,6 @@ ConvertToRISCV::convertToRISCVAssembly(MemRefMicrokernelOp kernelOp,
 void ConvertToRISCV::runOnOperation() {
   ModuleOp module = getOperation();
   SymbolTable symbolTable(module);
- // module.emitWarning() << "Trying to see if my snitch instruction survived! TURKEY\n";
 
   std::size_t kernelIndex = 0;
   module.walk([&](MemRefMicrokernelOp kernelOp) {
@@ -250,12 +156,8 @@ void ConvertToRISCV::runOnOperation() {
 
     FailureOr<StringAttr> riscvAssembly =
         convertToRISCVAssembly(kernelOp, kernelName);
-    // FailureOr<StringAttr> riscvAssembly =
-    // convertToRISCVAssemblyMyrtle(kernelOp, kernelName); // uncomment this line to see the streaming region and repeat value
     if (failed(riscvAssembly)) {
-     // module->emitWarning()<<"\nRADDISH: (convertToRISCV) convert to RISCV assembly failed\n";
       if (assertCompiled) {
-      //  module->emitWarning()<<"\nRADDISH: (convertToRISCV) assertion that I compiled ALSO failed\n";
         signalPassFailure();
         return WalkResult::interrupt();
       }
@@ -263,7 +165,6 @@ void ConvertToRISCV::runOnOperation() {
       auto builder = IRRewriter(kernelOp);
       builder.inlineBlockBefore(&kernelOp.getBody().front(), kernelOp,
                                 kernelOp.getInputs());
-      //module->emitWarning()<<"\nRADDISH: (convertToRISCV) erasing the kernel op and continuing on...\n";
       kernelOp.erase();
       return WalkResult::advance();
     }
@@ -273,19 +174,6 @@ void ConvertToRISCV::runOnOperation() {
     builder.create<CallMicrokernelOp>(kernelOp.getLoc(), kernelName,
                                       kernelOp.getInputs(), *riscvAssembly);
     kernelOp.erase();
-    //module.emitWarning() << "\nTURKEY\n does this show the riscv?"; // delete later
     return WalkResult::advance();
   });
-
-  // uncomment this module walk to get the riscv for the operation vvvvvvvvvv
-  // module.walk([&](mlir::func::FuncOp funcOp) { // delete later
-  //    if(funcOp.getName() ==
-  //        "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64"){
-     
-  //        funcOp->emitWarning() << "\nIs this the riscv we're looking for?";
-  //      //  This is the rewritten kernel!!!!!\n";
-
-  // }
-  // }); //delete later
-  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 }
