@@ -1,7 +1,7 @@
 #include "grapeFruit_util.h"
 
 #include <Quidditch/dispatch/dispatch.h>
-
+#include <Quidditch/time_dispatch/time_dispatch.h>
 #include <iree/base/alignment.h>
 
 #include <team_decls.h>
@@ -54,15 +54,15 @@ int run_grapeFruit_experiment(
   IREE_CHECK_OK(run_model(&config));
   unsigned long cycles_after = snrt_mcycle();
 
-  // for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
-  //   double value = (*data)[i];
-  //   printf("%f\n", value);
-  // }
+  for (int i = 0; i < IREE_ARRAYSIZE(*data); i++) {
+    double value = (*data)[i];
+    printf("%f\n", value);
+  }
 
-  // for(int i = 0; i < 5; i ++){
-  //   printf("%d: %lu - %lu = %lu\n", i, myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]);     
-  // }
-   int i = 0;
+  for(int i = 0; i < 5; i ++){
+    printf("%d: %lu - %lu = %lu\n", i, myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]);     
+  }
+  int i = 0;
   printf("dispatch 9: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 
   i = 1;
   printf("dispatch 0: %lu - %lu = %lu\n", myrtle_actual_cycles[i][1],myrtle_actual_cycles[i][0],myrtle_actual_cycles[i][1]-myrtle_actual_cycles[i][0]); 

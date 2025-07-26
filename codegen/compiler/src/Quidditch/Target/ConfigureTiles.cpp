@@ -162,19 +162,6 @@ static LogicalResult setRootConfig(FunctionOpInterface funcOp,
 
         std::string myErrs;
 
-        if (failed(myrtle::getCost(rootOp, l1Tiles, l1Interchange, myrtleCost,
-                                   myErrs))) {
-          funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-          return failure();
-        } 
-        else {
-          ts.setMyrtleCost(myrtleCost);
-          if (funcOp.getName() ==
-              "main$async_dispatch_1_matmul_transpose_b_1x1200x400_f64") {
-            funcOp.emitWarning() << "\nORANGE JUICE: " << myErrs;
-          }
-        }
-
         setLoweringConfig(rootOp,
                           quidditch::Snitch::LoweringConfigAttr::get(
                               rootOp->getContext(), workgroupTiles, l1Tiles,

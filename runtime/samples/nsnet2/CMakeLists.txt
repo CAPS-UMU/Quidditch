@@ -1,7 +1,7 @@
 
 iree_turbine(SRC NsNet2.py DST ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DTYPE "f64")
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2 FLAGS --mlir-disable-threading --iree-quidditch-import-tiles=/home/hoppip/Quidditch/runtime/samples/grapeFruit/markus-tile-sizes.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm FLAGS --iree-quidditch-import-tiles=/home/hoppip/Quidditch/runtime/samples/grapeFruit/markus-tile-sizes.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc DST nsnet2 FLAGS --mlir-disable-threading --iree-quidditch-import-tiles="${CMAKE_CURRENT_LIST_DIR}/markus-tile-sizes.json")
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/nsnet2.mlirbc LLVM DST nsnet2_llvm FLAGS --iree-quidditch-import-tiles="${CMAKE_CURRENT_LIST_DIR}/markus-tile-sizes.json")
 
 add_library(nsnet2_util nsnet2_util.c)
 target_link_libraries(nsnet2_util
@@ -9,6 +9,7 @@ target_link_libraries(nsnet2_util
     samples_util
     snRuntimeInterface
     Quidditch::dispatch::dispatch
+    Quidditch::time_dispatch::time_dispatch
 )
 target_include_directories(nsnet2_util INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
