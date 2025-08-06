@@ -2,7 +2,7 @@
 
 #include <sys/wait.h>
 #include <unistd.h>
-#include "Myrtle.h"
+
 #include "Quidditch/Dialect/Snitch/IR/QuidditchSnitchAttrs.h"
 #include "TilingScheme.h"
 #include "iree/compiler/Codegen/Dialect/Codegen/IR/IREECodegenAttrs.h"

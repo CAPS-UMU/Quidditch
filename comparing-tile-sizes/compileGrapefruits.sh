@@ -46,7 +46,6 @@ res=$(ls $searchSpaceCSV 2>/dev/null)
 if [[ $searchSpaceCSV != $res ]]; 
     then 
     echo "ERROR: search space file $searchSpaceCSV not found!"
-    exit 1
 fi
 
 
@@ -59,7 +58,9 @@ if [[ "$3" == "status" ]];
         echo "checking $basename.json build..." # inform user we are checking build associated with $basename.json
         grep "kernel does not fit into L1 memory and cannot be compiled" "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "Troublesome file path is" "$compileOutputDirectory/$basename/buildOutput.txt"
+        grep "ninja: build stopped: subcommand failed" "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "FAILED: runtime-prefix/src/runtime-stamp/runtime-build" "$compileOutputDirectory/$basename/buildOutput.txt"
+        grep "FAILED: build.ninja" "$compileOutputDirectory/$basename/buildOutput.txt"
         cd $here
         done
     gen_cmakelists "original" $grapefruitDir # generate original CMakeLists.txt

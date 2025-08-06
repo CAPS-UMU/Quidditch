@@ -5,12 +5,13 @@ searchSpaceCSV="$here/$1"
 experimentName="$2"
 finalOutputDirectory="$here/$experimentName"
 jsonOutputDirectory="$here/$experimentName/tile-sizes-to-test"
+
 ## this script requires a search space csv file
 res=$(ls $searchSpaceCSV 2>/dev/null)
 if [[ $searchSpaceCSV != $res ]]; 
     then 
     echo "ERROR: search space file $searchSpaceCSV not found!"
-    exit 1
+
 fi
 
 ## generate json files
@@ -47,7 +48,7 @@ if [[ "$6" == "correctness" ]];
 fi
 if [[ "$6" == "export" ]];
     then
-    . scrapeGrapefruits.sh $1 $experimentName $7 $8
+    . scrapeGrapefruits.sh $1 $experimentName 1 $8 # 1 is a legacy argument; someday remove
 fi
 
 

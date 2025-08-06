@@ -35,14 +35,15 @@ counter=0
         basename=$ts # TODO: rename basname as ts everywhere
         myExecutable="$compileOutputDirectory/$basename/GrapeFruit"
         echo $myExecutable 
-        cd $verilator
+        cd "$compileOutputDirectory/$basename"
         rm -R "$compileOutputDirectory/$basename/logs/"
-        nohup ./snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt" &
-        cp -r logs "$compileOutputDirectory/$basename/logs"
+        rm -rf "$compileOutputDirectory/$basename/run_output.txt"
+        nohup ../../../toolchain/bin/snitch_cluster.vlt $myExecutable &> "$compileOutputDirectory/$basename/run_output.txt" &
+      #  cp -r logs "$compileOutputDirectory/$basename/logs"
         cd $here
         if (( $counter % $batchSize == 0 )); then
         wait
         echo "starting new batch..."
         fi
         done
-wait &> /dev/null     
+wait #&> /dev/null     

@@ -15,16 +15,13 @@ buildDir="$quidditchDir/build"
 grapefruitExec="$buildDir/runtime/samples/grapeFruit/GrapeFruit"
 verilator="$quidditchDir/toolchain/bin"
 
-## debugging
-function_name(){
-    echo "yohoho $1"
-}
-
 ## helper function
 parse_exp_result(){
     filePath=$1
-    dispatchNo=$2
+    dispatchNo=$2 # legacy value
     dispatchName=$3
+    #echo "HOLAAAAA filePath is $filePath, dispatchNo is $dispatchNo and dispatchName is $dispatchName"
+    dispatchNo=$(python3 parseDispatchNo.py $dispatchName)
     basename=`basename $(echo $filePath | sed 's/run_output.txt//') | sed 's/[.][^.]*$//'`
     kernelTime=$(grep -E "^(dispatch) $dispatchNo: ([0-9]*) - ([0-9]*) = ([0-9]*)" "$filePath" | grep -oE '[^[:space:]]+$')
     totalTime=$(grep -E "cycles ([0-9]*)" "$filePath" | grep -oE '[^[:space:]]+$')
@@ -69,7 +66,7 @@ done
 
 ## generate fresh CSV output file
 rm "$parsedResultsCSV"
-rm "$here/$scrapeName/graphing.csv"
+rm "$here/$scrapeName/$scrapeName-graphing.csv"
 # rmdir "$here/$scrapeName" 
 # mkdir "$here/$scrapeName"
 touch "$parsedResultsCSV"
@@ -84,7 +81,7 @@ done
 
 ## merge search space info with parsed results for graphing
 python merge.py $searchSpaceCSV $parsedResultsCSV "JSON Name"
-cp "merged.csv" "$here/$scrapeName/graphing.csv"
+cp "merged.csv" "$here/$scrapeName/$scrapeName-graphing.csv"
 rm "merged.csv"
 
 

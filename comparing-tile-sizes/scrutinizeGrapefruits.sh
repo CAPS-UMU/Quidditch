@@ -9,31 +9,27 @@ epilogueFile="$quidditchDir/comparing-tile-sizes/cmakelist-epilogue.txt"
 scrapeName="$2"
 parsedResultsCSV="$here/$scrapeName/csv_experiment_results.csv"
 searchSpaceCSV="$here/$1"
-goldenOutputFile="$quidditchDir/comparing-tile-sizes/golden_output.txt"
+goldenOutputFile="$quidditchDir/comparing-tile-sizes/nsnet2_golden_output.txt"
 # build-specific constants
 grapefruitDir="$quidditchDir/runtime/samples/grapeFruit"
 buildDir="$quidditchDir/build"
 grapefruitExec="$buildDir/runtime/samples/grapeFruit/GrapeFruit"
 verilator="$quidditchDir/toolchain/bin"
 
-## debugging
-function_name(){
-    echo "yohoho $1"
-}
-
 ## helper function
-parse_exp_result(){
+compare_result(){
     filePath=$1
-    runOutputJustValues="./temp.txt"
+    runOutputJustValues="$2/temp.txt"
     rm $runOutputJustValues 2> /dev/null
     lineCount=$(wc --lines $filePath | head -n1 | sed -e 's/\s.*$//')
     theTail=$(($lineCount - 1))
-    theHead=$(($lineCount - 19))
-    tail -n $theTail $filePath | head -n $theHead > $runOutputJustValues
+    tail -n $theTail $filePath | head -n 161 > $runOutputJustValues
     diffResult=$(diff $goldenOutputFile $runOutputJustValues)
     if [[ $diffResult != "" ]]; 
         then 
         echo "ERROR: $filePath contains incorrect results!"
+        cp $filePath "$2/run_output_WRONG.txt"
+        rm -rf $filePath
         echo $diffResult
         else
         echo "$filePath OK"
@@ -48,41 +44,27 @@ if [[ $searchSpaceCSV != $res ]];
     exit 1
 fi
 
-existingExperiments=()
 missingExperiments=()
 
+echo "checking..."
 
 ## scrape experiments from the search space
 for ts in $(grep -oE '^(0-([0-9]*)-([0-9]*))' $searchSpaceCSV)
         do
         experimentResults="$here/$scrapeName/$ts/run_output.txt"
+        tempOutput="$here/$scrapeName/$ts"
         res=$(ls $experimentResults 2>/dev/null)
         if [[ $experimentResults == $res ]]; 
             then 
-            existingExperiments+=("$experimentResults")
+            compare_result "$experimentResults" "$tempOutput"
             else
             missingExperiments+=("$experimentResults")
         fi
 done
 
 
-echo "we will skipt the following missing experiments:"
+echo "we skipped the following missing experiments:"
 for element in "${missingExperiments[@]}"
 do
     echo $element
 done
-echo "we will check the following experiments for correctness:"
-for element in "${existingExperiments[@]}"
-do
-    echo $element
-done
-
-echo "checking..."
-
-## parse each experiment's run_output.txt
-## and check that it matches golden reference
-for element in "${existingExperiments[@]}"
-do
-    parse_exp_result $element $3 $4 #looks to me like we can remove the last two args from this statement
-done
-
