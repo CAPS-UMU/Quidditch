@@ -16,7 +16,6 @@ Testing/*
 build-notes/*
 build/*
 toolchain/*
-fakeNN/*
 notifyJobFinished.py
 cacutsLab.html
 cacutsLab.md
