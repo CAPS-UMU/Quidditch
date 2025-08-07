@@ -25,7 +25,7 @@ res=$(ls $searchSpaceCSV 2>/dev/null)
 if [[ $searchSpaceCSV != $res ]]; 
     then 
     echo -e "\tERROR: search space file $searchSpaceCSV not found!"
-    exit 1
+    return 1
 fi
 
 ## helper function
@@ -47,6 +47,8 @@ check_exp_result(){
         then 
         echo -e "\tERROR: $filePath contains incorrect results!"
         echo $diffResult
+        cat $goldOutputJustValues
+        cat $runOutputJustValues
         else
         echo -e "\t$filePath OK"
     fi
@@ -85,6 +87,7 @@ if [[ "$correctness" == "correctness" ]];
         # strip search space argument of its .csv extension
         basename=`basename $searchSpaceCSV | sed 's/[.][^.]*$//'`
         # generate fresh CSV output file
+        echo "FinalOutputDir is $finalOutputDir"
         results="$finalOutputDir/$basename-results.csv"
         touch $results
         echo "JSON Name,Kernel Name,Kernel Time,Total Time,M,N,K,m,n,k" > $results
@@ -123,30 +126,6 @@ if [[ "$correctness" == "correctness" ]];
                     echo -e "\t\t MISSING result for $ts"
                     #missingExperiments+=("$experimentResults")
                 fi
-                # golden results
-                # golden=$(echo "$M""x""$N""x""$K""w0-0-0")
-                # experimentResults="$goldenOutputDir/$golden/run_output.txt"
-                # res=$(ls $experimentResults 2>/dev/null)
-                # if [[ $experimentResults == $res ]]; 
-                #     then 
-                #     echo -e "\texport results related to $golden"
-                #     kernelTime=$(grep -E "^(dispatch) 0: ([0-9]*) - ([0-9]*) = ([0-9]*)" "$experimentResults" | grep -oE '[^[:space:]]+$')
-                #     totalTime=$(grep -E "cycles ([0-9]*)" "$experimentResults" | grep -oE '[^[:space:]]+$')
-                #     if [[ $kernelTime == "" || $totalTime == "" ]];
-                #         then
-                #             echo -e "\t\t INVALID results for $golden"
-                #             missingExperiments+=("$experimentResults")
-                #         else
-                #         echo "$golden,$dispatchName,$kernelTime,$totalTime,$M,$N,$K,0,0,0" >> $results
-                #     fi
-                #     else
-                #     missingExperiments+=("$experimentResults")
-                # fi
         done
-        # echo "we had to skip the following missing experiments:"
-        # for element in "${missingExperiments[@]}"
-        # do
-        #     echo $element
-        # done
         
 fi

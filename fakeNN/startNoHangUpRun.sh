@@ -8,7 +8,7 @@ echo "$6 says whether to skip email notification"
 
 . run_linear_layer.sh $1 $2 $3 $4 $5
 
-if [[ "$8" == "skip" ]];
+if [[ "$6" == "skip" ]];
     then
     echo "skipping email notification"
     else
