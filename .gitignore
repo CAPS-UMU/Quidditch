@@ -19,4 +19,3 @@ toolchain/*
 notifyJobFinished.py
 cacutsLab.html
 cacutsLab.md
-startNoHangUpRun.sh
