@@ -90,7 +90,7 @@ if [[ "$correctness" == "correctness" ]];
         echo "FinalOutputDir is $finalOutputDir"
         results="$finalOutputDir/$basename-results.csv"
         touch $results
-        echo "JSON Name,Kernel Name,Kernel Time,Total Time,M,N,K,m,n,k" > $results
+        echo "FakeNN JSON Name,Kernel Name,Kernel Time,Total Time,JSON Name" > $results
         for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
                 do
                 eatNum='^([0-9])([0-9])*'
@@ -107,6 +107,7 @@ if [[ "$correctness" == "correctness" ]];
                 k=$(echo $tail | grep -oE $eatNum)
                 dispatchNameTemplate="main\$async_dispatch_0_matmul_transpose_b_MxNxK_f64"
                 dispatchName="${dispatchNameTemplate/MxNxK/"$M"x"$N"x"$K"}"
+                jsonName="$m-$n-$k"
                 # regular tiled results
                 experimentResults="$finalOutputDir/$ts/run_output.txt"
                 res=$(ls $experimentResults 2>/dev/null)
@@ -120,12 +121,15 @@ if [[ "$correctness" == "correctness" ]];
                             missingExperiments+=("$experimentResults")
                         else
                             echo -e "\texported results related to $ts"
-                            echo "$ts,$dispatchName,$kernelTime,$totalTime,$M,$N,$K,$m,$n,$k" >> $results
+                            echo "$ts,$dispatchName,$kernelTime,$totalTime,$jsonName" >> $results
                     fi
                     else
                     echo -e "\t\t MISSING result for $ts"
                     #missingExperiments+=("$experimentResults")
                 fi
         done
-        
+        # merge results with search space info for graphing
+        python merge.py $searchSpaceCSV $results "JSON Name"
+        cp "merged.csv" "$finalOutputDir/$basename-graphing.csv"
+        rm "merged.csv"
 fi

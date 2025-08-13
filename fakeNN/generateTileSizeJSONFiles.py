@@ -13,7 +13,7 @@ else:
     # save a json tiling scheme with m=0, n=0, k=0 (golden)
     searchSpaceDF=pd.read_csv(sys.argv[1])
     for i in range(0, searchSpaceDF.shape[0]):
-        theName = searchSpaceDF["JSON Name"][i]
+        theName = searchSpaceDF["FakeNN JSON Name"][i]
         m = searchSpaceDF["m"][i]
         n = searchSpaceDF["n"][i]
         k=searchSpaceDF["k"][i]
