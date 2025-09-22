@@ -54,18 +54,14 @@ counter=0
                 echo -e "\trun.sh: about to run $ts"
                 cd $myOutputDir
                 nohup $verilator/snitch_cluster.vlt $myExec &> "run_output.txt" &
-                # cd $verilator
-                # echo "myExec is $myExec"
-                # echo "runOutputFile is $runOutputFile"
-                # # ./snitch_cluster.vlt "$myExec" &> "$runOutputFile" &
-                # # (sleep 2; echo "hoodle" &> "$runOutputFile" )&
-                # (./snitch_cluster.vlt "$myExec" &> "$runOutputFile")&
                 cd $here
                 if (( $counter % $batchSize == 0 )); then
                 wait
+                rm -rf "$finalOutputDir/*/logs"
                 echo "starting new batch..."
                 fi
         done
 wait
+rm -rf "$finalOutputDir/*/logs"
 echo "done waiting"
 

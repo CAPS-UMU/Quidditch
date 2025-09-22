@@ -46,9 +46,9 @@ check_exp_result(){
     if [[ $diffResult != "" ]]; 
         then 
         echo -e "\tERROR: $filePath contains incorrect results!"
-        echo $diffResult
-        cat $goldOutputJustValues
-        cat $runOutputJustValues
+        #echo $diffResult
+        # cat $goldOutputJustValues
+        # cat $runOutputJustValues
         else
         echo -e "\t$filePath OK"
     fi
@@ -76,9 +76,11 @@ if [[ "$correctness" == "correctness" ]];
             n=$(echo $tail | grep -oE $eatNum)
             tail=${tail#*-}
             k=$(echo $tail | grep -oE $eatNum)
-            golden=$(echo "$M""x""$N""x""$K""w0-0-0")
+            golden="$M""x""$N""x""$K""w0-0-0"
             output="$finalOutputDir/$ts/run_output.txt"
             goldenOutput="$goldenOutputDir/$golden/run_output.txt"
+            # echo "OUTPUT IS $output"
+            # echo "GOLDEN OUTPUT IS $goldenOutput"
             check_exp_result $output $goldenOutput
         done
     else

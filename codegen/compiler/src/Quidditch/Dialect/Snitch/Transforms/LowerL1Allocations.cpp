@@ -6,6 +6,8 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include <sstream> // for RADDISH debugging
+#include <string>  // for RADDISH debugging
 
 namespace quidditch::Snitch {
 #define GEN_PASS_DEF_LOWERL1ALLOCATIONSPASS
@@ -51,15 +53,33 @@ void LowerL1Allocations::runOnOperation() {
       getOperation().getLoc(),
       MemRefType::get({l1MemoryBytes}, builder.getI8Type()));
   uint64_t offset = 0;
+
+
+  std::stringstream history; // radish
+  // radish vvvvvvvvvv
+  history << "Let's look at ALL the allocOps before doging ANYTHING! \n";
+  for (memref::AllocaOp allocOp : allocs) {
+    MemRefType memRefType = allocOp.getType();
+    history << "\nallocOp with memref shape ";
+    for (const auto &shape : memRefType.getShape()) {
+      history << shape << " ";
+    }
+    history << "\n";
+  }
+  history << "Well, those were all the allocOps... =_=\n";
+  history << "\npoodle and pug: ";
+  getOperation()->emitWarning(history.str());
+  // radish ^^^^^^^^^^
+
+
+
   for (memref::AllocaOp allocOp : allocs) {
     builder.setInsertionPoint(allocOp);
     MemRefType memRefType = allocOp.getType();
     // Note: This assumes bitWidth == alignment == size.
+    // Since we use a scratchpad, align to size of element in bytes.
     uint64_t bitWidth = memRefType.getElementTypeBitWidth();
-    if (std::optional<uint64_t> alignment = allocOp.getAlignment())
-      offset = llvm::alignTo(offset, *alignment);
-    else
-      offset = llvm::alignTo(offset, llvm::divideCeil(bitWidth, 8));
+    offset = llvm::alignTo(offset, llvm::divideCeil(bitWidth, 8));
 
     auto byteShift =
         builder.create<arith::ConstantIndexOp>(allocOp.getLoc(), offset);

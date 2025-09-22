@@ -94,17 +94,20 @@ if [[ "$status" == "status" ]];
             echo -e "\tcompile.sh: checking $ts..."
             myBuildOutput="$finalOutputDir/$ts/buildOutput.txt"
             myErrRunOutput="$finalOutputDir/$ts/run_output.txt"
+            myBadExec="$finalOutputDir/$ts/FakeNN"
             res=$(grep "kernel does not fit into L1 memory and cannot be compiled" $myBuildOutput)
             if [[ $res != "" ]]; 
             then
                 echo -e "\t\tERROR building $ts: $res"
                 echo $res > $myErrRunOutput
+                rm -rf $myBadExec
             fi
             res=$(grep "Troublesome file path is" "$myBuildOutput")
             if [[ $res != "" ]]; 
             then
                     echo -e "\tERROR building $ts: $res"
                     echo $res > $myErrRunOutput
+                    rm -rf $myBadExec
             fi
         done
     else
@@ -146,6 +149,7 @@ if [[ "$status" == "status" ]];
                 grep "ninja: build stopped:" "$fakeNNDir/buildOutput.txt"
                 cd $here
                 # save a copy of the cmake and ninja build output
+                echo "copying output files to $myBuildDir"
                 cp "$fakeNNDir/cmakeOutput.txt" "$fakeNNDir/buildOutput.txt" -t $myBuildDir
                 # save a copy of the generated executable
                 cp  "$fakeNNExec" -t $myBuildDir

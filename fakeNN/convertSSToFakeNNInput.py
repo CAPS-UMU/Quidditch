@@ -15,21 +15,30 @@ if len(sys.argv) != 2:
     print(f"USAGE: Requires a search space csv file name")
 else:
     searchSpaceDF=pd.read_csv(sys.argv[1])
+    #40x120x20wm-n-k_searchSpace-n-dim-padding
+    myRegex=re.compile(r"(\d+)x(\d+)x(\d+)wm-n-k_searchSpace-n-dim-padding.csv")
     myRegex=re.compile(r"(\d+)x(\d+)x(\d+)wm-n-k_searchSpace.csv")
+    myRegex=re.compile(r"(\d+)x(\d+)x(\d+)wm-n-k_searchSpace-no-padding.csv")
     M, N, K = myRegex.search(sys.argv[1]).groups()
 
     f = open(f'{M}x{N}x{K}wm-n-k-fakeNN.csv',"w")
-    f.write("FakeNN JSON Name,M,N,K,m,n,k,JSON Name\n")
+    f.write("FakeNN JSON Name,m,n,k,JSON Name\n")
     for i in range(0, searchSpaceDF.shape[0]):
         m = searchSpaceDF["m Dim"][i]
         n = searchSpaceDF["Row Dim"][i]
         k=searchSpaceDF["Reduction Dim"][i]
-        f.write(f'{M}x{N}x{K}w{m}-{n}-{k},{M},{N},{K},{m},{n},{k},{m}-{n}-{k}')
+        f.write(f'{M}x{N}x{K}w{m}-{n}-{k},{m},{n},{k},{m}-{n}-{k}')
         f.write("\n")
     f.close()
 
     convert = pd.read_csv(f'{M}x{N}x{K}wm-n-k-fakeNN.csv')
-    merged = pd.merge(convert,searchSpaceDF,on="JSON Name",how="inner")
+    merged = pd.merge(convert,searchSpaceDF,on="JSON Name",how="outer")
+    preferred_front_order = ['FakeNN JSON Name','M','N','K','m','n','k','JSON Name']
+    pfoSet = set(preferred_front_order)
+    wofSet = set(set(merged.columns).difference(pfoSet))
+    preferred_order = preferred_front_order + list(wofSet)
+    merged = merged[preferred_order]
+    
     merged.to_csv(
             f'{M}x{N}x{K}wm-n-k-fakeNN.csv',
             index=False,

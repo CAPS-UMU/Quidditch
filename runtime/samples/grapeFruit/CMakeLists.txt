@@ -1,7 +1,7 @@
-set( MYRTLE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../myrtle/myrtle.py)
+set( MYRTLE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../myrtle/myrtle/myrtle.py)
 iree_turbine(SRC grapeFruit.py DST ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DTYPE "f64" M 5 N 6 K 7)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-7-0-600-8.json)
-quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/disp-7-0-600-8.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc DST grapeFruit FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/0-40-100.json)
+quidditch_module(SRC ${CMAKE_CURRENT_BINARY_DIR}/grapeFruit.mlirbc LLVM DST grapeFruit_llvm FLAGS --mlir-disable-threading --iree-quidditch-time-disp=grapeFruit --iree-quidditch-myrtle=${MYRTLE_PATH} --iree-quidditch-myrtle-mode=svrcyc --iree-quidditch-myrtle-out=${CMAKE_CURRENT_LIST_DIR}/ts-answer.json --iree-quidditch-import-tiles=${CMAKE_CURRENT_LIST_DIR}/0-40-100.json)
 add_library(grapeFruit_util grapeFruit_util.c)
 target_link_libraries(grapeFruit_util
     PRIVATE

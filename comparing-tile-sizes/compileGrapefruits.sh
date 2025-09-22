@@ -52,12 +52,14 @@ fi
 if [[ "$3" == "status" ]];
     then
     ## check whether each build was successful
-    for ts in $(grep -oE '^(0-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+    for ts in $(grep -oE '^(([0-9]*)-([0-9]*)-([0-9]*))' $searchSpaceCSV)
         do
         basename=$ts # TODO: rename basname as ts everywhere
         echo "checking $basename.json build..." # inform user we are checking build associated with $basename.json
+        ls "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "kernel does not fit into L1 memory and cannot be compiled" "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "Troublesome file path is" "$compileOutputDirectory/$basename/buildOutput.txt"
+        grep "error: failed to legalize operation 'quidditch_snitch.call_microkernel' that was explicitly marked illegal" "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "ninja: build stopped: subcommand failed" "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "FAILED: runtime-prefix/src/runtime-stamp/runtime-build" "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "FAILED: build.ninja" "$compileOutputDirectory/$basename/buildOutput.txt"
@@ -66,7 +68,7 @@ if [[ "$3" == "status" ]];
     gen_cmakelists "original" $grapefruitDir # generate original CMakeLists.txt
     else
         echo "compileGrapefruits.sh: generating the cmake files and compiling..."
-        for ts in $(grep -oE '^(0-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+        for ts in $(grep -oE '^(([0-9]*)-([0-9]*)-([0-9]*))' $searchSpaceCSV)
             do
             basename=$ts # TODO: rename basname as ts everywhere
             mkdir -p "$compileOutputDirectory/$basename" # create a local subfolder for this set of tile sizes

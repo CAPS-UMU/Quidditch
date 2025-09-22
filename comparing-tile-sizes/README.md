@@ -106,6 +106,34 @@ It's recommended to perform one of the four steps, check the results, and then p
    . run_experiment.sh "ex_1x600x600wm-n-k_case1_searchSpace.csv" "1x600x600wm-n-k" no no no export 1 "main\$async_dispatch_8_matmul_transpose_b_1x600x600_f64"
    ```
 
+## Run w/ No Hang Up Examples
+
+1. generate jsons
+   ```
+   . startNoHangUpRun.sh "1x161x600wm-n-k_searchSpace.csv" "1x161x600wm-n-k" genJsons no no no "main\$async_dispatch_9_matmul_transpose_b_1x161x600_f64" skip > nsnet1x161x600wm-n-k.output
+   ```
+   ```
+   . startNoHangUpRun.sh "1x400x161w1-40-100_searchSpace.csv" "1x400x161w1-40-100" genJsons no no no "main\$async_dispatch_0_matmul_transpose_b_1x400x161_f64" skip > nsnet1x400x161w1-40-100.output
+   ```
+
+2. compile
+   ```
+   . startNoHangUpRun.sh "1x161x600wm-n-k_searchSpace.csv" "1x161x600wm-n-k" no compile no no "main\$async_dispatch_9_matmul_transpose_b_1x161x600_f64" skip > nsnet1x161x600wm-n-k.output
+   ```
+   ```
+   . startNoHangUpRun.sh "1x400x161w1-40-100_searchSpace.csv" "1x400x161w1-40-100" no compile no no "main\$async_dispatch_0_matmul_transpose_b_1x400x161_f64" skip > nsnet1x400x161w1-40-100.output
+   ```
+
+   
+
+3. status
+
+4. run
+
+5. export results
+
+
+
 ## IV. Excerpt: Default Tiling Schemes for each Dispatch
 
 Excerpt from `generateTileSizeJSONFiles.py`:
