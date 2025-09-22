@@ -52,9 +52,23 @@ fi
 if [[ "$3" == "status" ]];
     then
     ## check whether each build was successful
-    for ts in $(grep -oE '^(([0-9]*)-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+    uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
+    eatNum='^([0-9])([0-9])*'
+    for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
         do
-        basename=$ts # TODO: rename basname as ts everywhere
+        eatNum='^([0-9])([0-9])*'
+        M=$(echo $ts | grep -oE $eatNum)
+        tail=${ts#*x}
+        N=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*x}
+        K=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*w}
+        m=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*-}
+        n=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*-}
+        k=$(echo $tail | grep -oE $eatNum)
+        basename=$(echo "$m""-""$n""-""$k")
         echo "checking $basename.json build..." # inform user we are checking build associated with $basename.json
         ls "$compileOutputDirectory/$basename/buildOutput.txt"
         grep "kernel does not fit into L1 memory and cannot be compiled" "$compileOutputDirectory/$basename/buildOutput.txt"
@@ -68,14 +82,30 @@ if [[ "$3" == "status" ]];
     gen_cmakelists "original" $grapefruitDir # generate original CMakeLists.txt
     else
         echo "compileGrapefruits.sh: generating the cmake files and compiling..."
-        for ts in $(grep -oE '^(([0-9]*)-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+        uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
+        eatNum='^([0-9])([0-9])*'
+        #for ts in $(grep -oE '^(([0-9]*)-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+        for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
             do
-            basename=$ts # TODO: rename basname as ts everywhere
+            eatNum='^([0-9])([0-9])*'
+            M=$(echo $ts | grep -oE $eatNum)
+            tail=${ts#*x}
+            N=$(echo $tail | grep -oE $eatNum)
+            tail=${tail#*x}
+            K=$(echo $tail | grep -oE $eatNum)
+            tail=${tail#*w}
+            m=$(echo $tail | grep -oE $eatNum)
+            tail=${tail#*-}
+            n=$(echo $tail | grep -oE $eatNum)
+            tail=${tail#*-}
+            k=$(echo $tail | grep -oE $eatNum)
+            golden=$(echo "$M""x""$N""x""$K""w0-0-0")
+            basename=$(echo "$m""-""$n""-""$k")
             mkdir -p "$compileOutputDirectory/$basename" # create a local subfolder for this set of tile sizes
             echo "$basename.json" # inform user we are about to start processing $basename.json
             #exportedCostFile="$compileOutputDirectory/$basename/tilingCosts.json" # using full path here
-            gen_cmakelists "$ts.json" $grapefruitDir # generate basename-specific CMakeLists.txt
-            gen_cmakelists "$ts.json" "$compileOutputDirectory/$basename" # save a copy of it in our local subfolder
+            gen_cmakelists "$basename.json" $grapefruitDir # generate basename-specific CMakeLists.txt
+            gen_cmakelists "$basename.json" "$compileOutputDirectory/$basename" # save a copy of it in our local subfolder
             cd $buildDir
             cmake .. -GNinja \
             -DCMAKE_C_COMPILER=clang \

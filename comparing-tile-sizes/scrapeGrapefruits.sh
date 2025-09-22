@@ -21,6 +21,7 @@ parse_exp_result(){
     dispatchNo=$2 # legacy value
     dispatchName=$3
     #echo "HOLAAAAA filePath is $filePath, dispatchNo is $dispatchNo and dispatchName is $dispatchName"
+    #ts=$(python3 parseTSFromPath.py $filePath)
     dispatchNo=$(python3 parseDispatchNo.py $dispatchName)
     basename=`basename $(echo $filePath | sed 's/run_output.txt//') | sed 's/[.][^.]*$//'`
     kernelTime=$(grep -E "^(dispatch) $dispatchNo: ([0-9]*) - ([0-9]*) = ([0-9]*)" "$filePath" | grep -oE '[^[:space:]]+$')
@@ -40,9 +41,25 @@ existingExperiments=()
 missingExperiments=()
 
 ## scrape experiments from the search space
-for ts in $(grep -oE '^(0-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+#for ts in $(grep -oE '^(0-([0-9]*)-([0-9]*))' $searchSpaceCSV)
+uniquePointRegex='^(([0-9]*)x([0-9]*)x([0-9]*))w([0-9]*)-([0-9]*)-([0-9]*)'
+eatNum='^([0-9])([0-9])*'
+for ts in $(grep -oE $uniquePointRegex $searchSpaceCSV)
         do
-        experimentResults="$here/$scrapeName/$ts/run_output.txt"
+        eatNum='^([0-9])([0-9])*'
+        M=$(echo $ts | grep -oE $eatNum)
+        tail=${ts#*x}
+        N=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*x}
+        K=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*w}
+        m=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*-}
+        n=$(echo $tail | grep -oE $eatNum)
+        tail=${tail#*-}
+        k=$(echo $tail | grep -oE $eatNum)
+        basename=$(echo "$m""-""$n""-""$k")
+        experimentResults="$here/$scrapeName/$basename/run_output.txt"
         res=$(ls $experimentResults 2>/dev/null)
         if [[ $experimentResults == $res ]]; 
             then 
@@ -53,12 +70,12 @@ for ts in $(grep -oE '^(0-([0-9]*)-([0-9]*))' $searchSpaceCSV)
 done
 
 
-echo "we will skip the following missing experiments:"
+echo "scrapeGrapefruits.sh: we will skip the following missing experiments:"
 for element in "${missingExperiments[@]}"
 do
     echo $element
 done
-echo "we will export the following experiment results to a csv:"
+echo "scrapeGrapefruits.sh: we will export the following experiment results to a csv:"
 for element in "${existingExperiments[@]}"
 do
     echo $element
@@ -70,12 +87,13 @@ rm "$here/$scrapeName/$scrapeName-graphing.csv"
 # rmdir "$here/$scrapeName" 
 # mkdir "$here/$scrapeName"
 touch "$parsedResultsCSV"
-echo "JSON Name,Kernel Name,Kernel Time,Total Time" >> $parsedResultsCSV
+echo "JSON Name,Kernel Name,Kernel Time,Total Time" > $parsedResultsCSV #$results
+#echo "JSON Name,Kernel Name,Kernel Time,Total Time" >> $parsedResultsCSV
 
 ## parse each experiment's run_output.txt
 ## and append the parsed info to the CSV file
 for element in "${existingExperiments[@]}"
-do
+do  
     parse_exp_result $element $3 $4
 done
 

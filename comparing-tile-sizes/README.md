@@ -105,6 +105,17 @@ It's recommended to perform one of the four steps, check the results, and then p
    ```
    . run_experiment.sh "ex_1x600x600wm-n-k_case1_searchSpace.csv" "1x600x600wm-n-k" no no no export 1 "main\$async_dispatch_8_matmul_transpose_b_1x600x600_f64"
    ```
+## Run w/ No Hang Up (Recommended way to run)
+```
+ . startNoHangUpRun.sh "1x400x161w1-40-100_searchSpace.csv" "1x400x161w1-40-100" no compile no no "main\$async_dispatch_0_matmul_transpose_b_1x400x161_f64" skip > nsnet1x400x161w1-40-100.output
+```
+```
+. startNoHangUpRun.sh "1x400x161w1-40-100_searchSpace.csv" "1x400x161w1-40-100" no status no no "main\$async_dispatch_0_matmul_transpose_b_1x400x161_f64" skip > nsnet1x400x161w1-40-100.output
+```
+skip running and try exporting:
+```
+. startNoHangUpRun.sh "1x400x161w1-40-100_searchSpace.csv" "1x400x161w1-40-100" no status no export "main\$async_dispatch_0_matmul_transpose_b_1x400x161_f64" skip > nsnet1x400x161w1-40-100.output
+```
 
 ## Run w/ No Hang Up Examples
 
